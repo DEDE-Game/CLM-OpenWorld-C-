@@ -40,27 +40,27 @@ ARainThunder::ARainThunder()
 
 void ARainThunder::DefaultInitializer()
 {
-	ConstructorHelpers::FObjectFinder<UNiagaraSystem> RainAsset(
+	static ConstructorHelpers::FObjectFinder<UNiagaraSystem> RainAsset(
 		TEXT("/Script/Niagara.NiagaraSystem'/Game/Game/VFX/NS_Rain.NS_Rain'")
 	);
 	RainVFX = RainAsset.Object;
 
-	ConstructorHelpers::FObjectFinder<UMaterialInterface> ParentThunderMatAsset(
+	static ConstructorHelpers::FObjectFinder<UMaterialInterface> ParentThunderMatAsset(
 		TEXT("/Script/Engine.MaterialInstanceConstant'/Game/Game/Materials/Skies/MI_Thunder.MI_Thunder'")
 	);
 	ParentThunderMaterial = ParentThunderMatAsset.Object;
 
-	ConstructorHelpers::FObjectFinder<USoundBase> RainSFXAsset(
+	static ConstructorHelpers::FObjectFinder<USoundBase> RainSFXAsset(
 		TEXT("/Script/Engine.SoundWave'/Game/Game/Audio/Thunders/LightRain.LightRain'")
 	);
 	RainSFX = RainSFXAsset.Object;
 
-	ConstructorHelpers::FObjectFinder<UCurveFloat> ThunderCurveAsset(
+	static ConstructorHelpers::FObjectFinder<UCurveFloat> ThunderCurveAsset(
 		TEXT("/Script/Engine.CurveFloat'/Game/Game/Curves/C_ThunderCurve.C_ThunderCurve'")
 	);
 	ThunderCurve = ThunderCurveAsset.Object;
 
-	ConstructorHelpers::FObjectFinder<USoundBase> ThunderSFXAsset(
+	static ConstructorHelpers::FObjectFinder<USoundBase> ThunderSFXAsset(
 		TEXT("/Script/MetasoundEngine.MetaSoundSource'/Game/Game/Audio/Thunders/MS_Thunders.MS_Thunders'")
 	);
 	ThunderSFX = ThunderSFXAsset.Object;

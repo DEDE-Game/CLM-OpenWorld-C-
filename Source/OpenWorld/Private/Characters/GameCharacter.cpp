@@ -42,27 +42,27 @@ AGameCharacter::AGameCharacter()
 
 void AGameCharacter::DefaultInitializer()
 {
-	ConstructorHelpers::FObjectFinder<UInputAction> LookActionAsset(
+	static ConstructorHelpers::FObjectFinder<UInputAction> LookActionAsset(
 		TEXT("/Script/EnhancedInput.InputAction'/Game/Game/Inputs/IA_Look.IA_Look'")
 	);
 	LookAction = LookActionAsset.Object;
 
-	ConstructorHelpers::FObjectFinder<UInputAction> MoveActionAsset(
+	static ConstructorHelpers::FObjectFinder<UInputAction> MoveActionAsset(
 		TEXT("/Script/EnhancedInput.InputAction'/Game/Game/Inputs/IA_Move.IA_Move'")
 	);
 	MoveAction = MoveActionAsset.Object;
 
-	ConstructorHelpers::FObjectFinder<UInputAction> SprintActionAsset(
+	static ConstructorHelpers::FObjectFinder<UInputAction> SprintActionAsset(
 		TEXT("/Script/EnhancedInput.InputAction'/Game/Game/Inputs/IA_Sprint.IA_Sprint'")
 	);
 	SprintAction = SprintActionAsset.Object;
 
-	ConstructorHelpers::FObjectFinder<UInputAction> WalkActionAsset(
+	static ConstructorHelpers::FObjectFinder<UInputAction> WalkActionAsset(
 		TEXT("/Script/EnhancedInput.InputAction'/Game/Game/Inputs/IA_Walk.IA_Walk'")
 	);
 	WalkAction = WalkActionAsset.Object;
 
-	ConstructorHelpers::FObjectFinder<UInputAction> JumpActionAsset(
+	static ConstructorHelpers::FObjectFinder<UInputAction> JumpActionAsset(
 		TEXT("/Script/EnhancedInput.InputAction'/Game/Game/Inputs/IA_Jump.IA_Jump'")
 	);
 	JumpAction = JumpActionAsset.Object;

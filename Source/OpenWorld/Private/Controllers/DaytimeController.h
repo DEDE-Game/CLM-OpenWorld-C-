@@ -3,23 +3,24 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Components/ActorComponent.h"
+#include "GameFramework/Actor.h"
 #include "DaytimeController.generated.h"
 
 class ADirectionalLight;
 class APostProcessVolume;
 
-UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
-class UDaytimeController : public UActorComponent
+UCLASS()
+class ADaytimeController : public AActor
 {
 	GENERATED_BODY()
 
 public:	
-	UDaytimeController();
+	ADaytimeController();
 
 	// ===== Lifecycles ========== //
 
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+	virtual void OnConstruction(const FTransform& Transform) override;
+	virtual void Tick(float DeltaTime) override;
 	
 protected:
 	// ===== Lifecycles ========== //
@@ -29,12 +30,21 @@ protected:
 private:
 	void ReferencesInitializer();
 
+	// ===== Components ========== //
+
+	/** Used as actual sun's rotation to avoid gimble lock */
+	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<USceneComponent> SunScene;
+
+	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<UStaticMeshComponent> MoonMesh;
+
 	// ===== Lightings ========== //
 
-	UPROPERTY()
+	UPROPERTY(EditInstanceOnly, Category=Lightings)
 	TWeakObjectPtr<ADirectionalLight> Sun;
 
-	UPROPERTY()
+	UPROPERTY(EditInstanceOnly, Category=Lightings)
 	TWeakObjectPtr<ADirectionalLight> Moon;
 
 	void UpdateTime();

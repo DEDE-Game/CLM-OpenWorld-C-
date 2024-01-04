@@ -3,55 +3,49 @@
 #include "Controllers/WeatherController.h"
 #include "Components/SkyAtmosphereComponent.h"
 #include "Components/VolumetricCloudComponent.h"
-#include "Engine/PostProcessVolume.h"
 #include "Environments/RainThunder.h"
 #include "GameFramework/GameModeBase.h"
 #include "Kismet/GameplayStatics.h"
 #include "Materials/MaterialParameterCollection.h"
 #include "Materials/MaterialParameterCollectionInstance.h"
 
-UWeatherController::UWeatherController()
+AWeatherController::AWeatherController()
 {
 	// Actor
-	PrimaryComponentTick.bCanEverTick 		   = true;
-	PrimaryComponentTick.bStartWithTickEnabled = false;
+	PrimaryActorTick.bCanEverTick 		   = true;
+	PrimaryActorTick.bStartWithTickEnabled = false;
 	// PrimaryComponentTick.TickInterval = 1.f;
 
 	DefaultInitializer();
 }
 
-// ==================== Initializer ==================== //
-
-void UWeatherController::DefaultInitializer()
+void AWeatherController::DefaultInitializer()
 {
-	ConstructorHelpers::FObjectFinder<UMaterialParameterCollection> GlobalParam(
+	static ConstructorHelpers::FObjectFinder<UMaterialParameterCollection> GlobalParamAsset(
 		TEXT("/Script/Engine.MaterialParameterCollection'/Game/Game/Materials/MP_Global.MP_Global'")
 	);
-	GlobalMatParam = GlobalParam.Object;
+	GlobalMatParam = GlobalParamAsset.Object;
 
-	ConstructorHelpers::FObjectFinder<UMaterialInterface> CloudMat(
+	static ConstructorHelpers::FObjectFinder<UMaterialInterface> CloudMatAsset(
 		TEXT("/Script/Engine.MaterialInstanceConstant'/Game/Game/Materials/Skies/MI_Cloud.MI_Cloud'")
 	);
-	CloudParentMaterial = CloudMat.Object;
+	CloudParentMaterial = CloudMatAsset.Object;
 
-	ConstructorHelpers::FClassFinder<ARainThunder> RainThunderBP(
+	static ConstructorHelpers::FClassFinder<ARainThunder> RainThunderAsset(
 		TEXT("/Game/Game/Blueprints/Environments/BP_RainThunder")
 	);
-	RainThunderClass = RainThunderBP.Class;
+	RainThunderClass = RainThunderAsset.Class;
 }
 
-void UWeatherController::GetObjectReferences()
+void AWeatherController::ReferencesInitializer()
 {
 	// Global Params
 	GlobalMatParamIns = GetWorld()->GetParameterCollectionInstance(GlobalMatParam.LoadSynchronous());
 	PlayerPawn 		  = UGameplayStatics::GetPlayerPawn(this, 0);
 
 	// Lightings
-	SkyAtmosphere 	  = Cast<ASkyAtmosphere>	(UGameplayStatics::GetActorOfClass(this, ASkyAtmosphere	   ::StaticClass()));
-	VolumetricCloud   = Cast<AVolumetricCloud>	(UGameplayStatics::GetActorOfClass(this, AVolumetricCloud  ::StaticClass()));
-
-	PostProcessVolume = Cast<APostProcessVolume>(UGameplayStatics::GetActorOfClass(this, APostProcessVolume::StaticClass()));
-	PostProcessVolume->Settings.bOverride_AutoExposureBias = true;
+	SkyAtmosphere 	  = Cast<ASkyAtmosphere>  (UGameplayStatics::GetActorOfClass(this, ASkyAtmosphere  ::StaticClass()));
+	VolumetricCloud   = Cast<AVolumetricCloud>(UGameplayStatics::GetActorOfClass(this, AVolumetricCloud::StaticClass()));
 
 	// Set material for the volumetric cloud
 	UVolumetricCloudComponent* CloudComponent = VolumetricCloud->GetComponentByClass<UVolumetricCloudComponent>();
@@ -61,11 +55,11 @@ void UWeatherController::GetObjectReferences()
 
 // ==================== Lifecycles ==================== //
 
-void UWeatherController::BeginPlay()
+void AWeatherController::BeginPlay()
 {
 	Super::BeginPlay();
 
-	GetObjectReferences();
+	ReferencesInitializer();
 	PrepareEnvironments();
 
 	// TESTING PURPOSE!!!
@@ -85,48 +79,45 @@ void UWeatherController::BeginPlay()
 	// }, 66.f, false);
 }
 
-void UWeatherController::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction)
+void AWeatherController::Tick(float DeltaTime)
 {
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+	Super::Tick(DeltaTime);
 
 	ChangeLightingValues(DeltaTime);	
 
 	// Watch the progress, if none simply disable the tick
-	if (!bChangingLighting) SetComponentTickEnabled(false);
+	if (!bChangingLighting) SetActorTickEnabled(false);
 }
 
 // ==================== Lightings ==================== //
 
-void UWeatherController::ChangeLightingValues(float DeltaTime)
+void AWeatherController::ChangeLightingValues(float DeltaTime)
 {
 	if (!bChangingLighting) return;
 
 	// Get smooth changing result by using interpolation
-	CurrentAutoExposureBias 	= FMath::FInterpConstantTo(CurrentAutoExposureBias, TargetAutoExposureBias, DeltaTime, .09f);
 	CurrentCloudDensity = FMath::FInterpConstantTo(CurrentCloudDensity, TargetCloudDensity, DeltaTime, .09f);
 	CurrentAtmosphereColor = InterpLinearColor(DeltaTime, .09f);
 
 	// Apply
-	PostProcessVolume->Settings.AutoExposureBias = CurrentAutoExposureBias;
 	CloudMaterial	 ->SetScalarParameterValue(TEXT("Density"), CurrentCloudDensity);
 	SkyAtmosphere	 ->GetComponent()->SetRayleighScattering(CurrentAtmosphereColor);
 
 	// Stop changing once its nearly equal
-	if (FMath::IsNearlyEqual(CurrentAutoExposureBias, TargetAutoExposureBias, .0001f))
+	if (FMath::IsNearlyEqual(CurrentCloudDensity, TargetCloudDensity, .0001f))
 		bChangingLighting = false;
 }
 
-void UWeatherController::SetLightingValues(const FLinearColor& AtmosphereColor, float AutoExposureBias, float CloudDensity)
+void AWeatherController::SetLightingValues(const FLinearColor& AtmosphereColor, float AutoExposureBias, float CloudDensity)
 {
 	TargetAtmosphereColor  = AtmosphereColor;
-	TargetAutoExposureBias = AutoExposureBias;
 	TargetCloudDensity 	   = CloudDensity;
 
 	bChangingLighting = true;
-	SetComponentTickEnabled(true);
+	SetActorTickEnabled(true);
 }
 
-FLinearColor UWeatherController::InterpLinearColor(float DeltaTime, float InterpSpeed)
+FLinearColor AWeatherController::InterpLinearColor(float DeltaTime, float InterpSpeed)
 {
 	FLinearColor NewLinearColor;
 
@@ -140,7 +131,7 @@ FLinearColor UWeatherController::InterpLinearColor(float DeltaTime, float Interp
 
 // ==================== Environments ==================== //
 
-void UWeatherController::PrepareEnvironments()
+void AWeatherController::PrepareEnvironments()
 {
 	// Thunder
 	RainThunder = GetWorld()->SpawnActor<ARainThunder>(RainThunderClass);

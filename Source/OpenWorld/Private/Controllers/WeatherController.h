@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Components/ActorComponent.h"
+#include "GameFramework/Actor.h"
 #include "WeatherController.generated.h"
 
 class APostProcessVolume;
@@ -15,16 +15,16 @@ class UMaterialParameterCollection;
 class UMaterialParameterCollectionInstance;
 
 UCLASS()
-class UWeatherController : public UActorComponent
+class AWeatherController : public AActor
 {
 	GENERATED_BODY()
 	
 public:	
-	UWeatherController();
+	AWeatherController();
 
 	// ===== Lifecycles ========== //
 
-	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction) override;
+	virtual void Tick(float DeltaTime) override;
 
 protected:
 	// ===== Lifecycles ========== //
@@ -32,10 +32,8 @@ protected:
 	virtual void BeginPlay() override;
 
 private:
-	// ===== Initializer ========== //
-
 	void DefaultInitializer();
-	void GetObjectReferences();
+	void ReferencesInitializer();
 
 	// ===== References ========== //
 
@@ -54,9 +52,6 @@ private:
 	TWeakObjectPtr<ASkyAtmosphere> SkyAtmosphere;
 
 	UPROPERTY(VisibleInstanceOnly, Category=Lightings)
-	TWeakObjectPtr<APostProcessVolume> PostProcessVolume;
-
-	UPROPERTY(VisibleInstanceOnly, Category=Lightings)
 	TWeakObjectPtr<AVolumetricCloud> VolumetricCloud;
 
 	UPROPERTY(VisibleInstanceOnly, Category=Materials)
@@ -69,11 +64,9 @@ private:
 	bool bChangingLighting = false;
 
 	FLinearColor CurrentAtmosphereColor = FLinearColor(.175287f, .409607f, 1.f);
-	float CurrentAutoExposureBias = 1.f;
 	float CurrentCloudDensity = 0.f;
 
 	FLinearColor TargetAtmosphereColor;
-	float TargetAutoExposureBias;
 	float TargetCloudDensity;
 
 	/** Make changing lightings to be smooth */

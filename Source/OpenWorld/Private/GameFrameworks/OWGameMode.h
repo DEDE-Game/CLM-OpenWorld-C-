@@ -6,9 +6,6 @@
 #include "GameFramework/GameModeBase.h"
 #include "OWGameMode.generated.h"
 
-class UDaytimeController;
-class UWeatherController;
-
 UCLASS()
 class AOWGameMode : public AGameModeBase
 {
@@ -20,14 +17,6 @@ public:
 private:
 	// ===== Initializer ========== //
 
-	void DefaultClassInitializer();
-
-	// ===== Controllers ========== //
-
-	UPROPERTY(VisibleAnywhere)
-	TObjectPtr<UDaytimeController> DaytimeController;
-	
-	UPROPERTY(VisibleAnywhere)
-	TObjectPtr<UWeatherController> WeatherController;
+	void DefaultInitializer();
 
 };

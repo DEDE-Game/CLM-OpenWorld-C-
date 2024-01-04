@@ -6,15 +6,15 @@
 
 AOWPlayerController::AOWPlayerController()
 {
-    DefaultClassInitializer();
+    DefaultInitializer();
 }
 
 // ==================== Initializer ==================== //
 
-void AOWPlayerController::DefaultClassInitializer()
+void AOWPlayerController::DefaultInitializer()
 {
     // Game Input Mapping Context
-    ConstructorHelpers::FObjectFinder<UInputMappingContext> MappingContext(
+    static ConstructorHelpers::FObjectFinder<UInputMappingContext> MappingContext(
         TEXT("/Script/EnhancedInput.InputMappingContext'/Game/Game/Inputs/IMC_GameInput.IMC_GameInput'")
     );
 

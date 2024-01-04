@@ -26,9 +26,7 @@ protected:
 	virtual void BeginPlay() override;
 
 private:
-	// ===== Initializer ========== //
-
-	void DefaultClassInitializer();
+	void DefaultInitializer();
 
 	// ===== Input ========== //
 
