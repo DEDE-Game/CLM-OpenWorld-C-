@@ -14,7 +14,6 @@ AWeatherController::AWeatherController()
 	// Actor
 	PrimaryActorTick.bCanEverTick 		   = true;
 	PrimaryActorTick.bStartWithTickEnabled = false;
-	// PrimaryComponentTick.TickInterval = 1.f;
 
 	DefaultInitializer();
 }
@@ -64,18 +63,18 @@ void AWeatherController::BeginPlay()
 
 	// TESTING PURPOSE!!!
 	// FTimerHandle Handle;
-	// GetOwner()->GetWorldTimerManager().SetTimer(
-	// 	Handle, [this]() { SetLightingValues(FLinearColor(.411458f, .411458f, .411458f), -1.5f, .5f); }, 3.f, false
+	// GetWorldTimerManager().SetTimer(
+	// 	Handle, [this]() { SetLightingValues(FLinearColor(.411458f, .411458f, .411458f), 1.f, -1.f); }, 3.f, false
 	// );
 	// FTimerHandle RainHandle;
-	// GetOwner()->GetWorldTimerManager().SetTimer(
+	// GetWorldTimerManager().SetTimer(
 	// 	RainHandle, [this]() { RainThunder->ToggleRain(true); RainThunder->ToggleThunder(true); }, 6.f, false
 	// );
 	// FTimerHandle StopHandle;
-	// GetOwner()->GetWorldTimerManager().SetTimer(StopHandle, [&] () {
+	// GetWorldTimerManager().SetTimer(StopHandle, [&] () {
 	// 	RainThunder->ToggleThunder(false);
 	// 	RainThunder->ToggleRain(false);
-	// 	SetLightingValues(FLinearColor(.175287f, .409607f, 1.f), 1.f, 0.f); 
+	// 	SetLightingValues(FLinearColor(.175287f, .409607f, 1.f), .1f, 1.f); 
 	// }, 66.f, false);
 }
 
@@ -96,22 +95,25 @@ void AWeatherController::ChangeLightingValues(float DeltaTime)
 	if (!bChangingLighting) return;
 
 	// Get smooth changing result by using interpolation
-	CurrentCloudDensity = FMath::FInterpConstantTo(CurrentCloudDensity, TargetCloudDensity, DeltaTime, .09f);
+	CurrentCloudDensity    = FMath::FInterpConstantTo(CurrentCloudDensity, TargetCloudDensity, DeltaTime, .09f);
+	CurrentCloudIntensity  = FMath::FInterpConstantTo(CurrentCloudIntensity, TargetCloudIntensity, DeltaTime, 0.9f);
 	CurrentAtmosphereColor = InterpLinearColor(DeltaTime, .09f);
 
 	// Apply
-	CloudMaterial	 ->SetScalarParameterValue(TEXT("Density"), CurrentCloudDensity);
-	SkyAtmosphere	 ->GetComponent()->SetRayleighScattering(CurrentAtmosphereColor);
+	CloudMaterial->SetScalarParameterValue(TEXT("Cloud Density"), CurrentCloudDensity);
+	CloudMaterial->SetScalarParameterValue(TEXT("Erosion Intensity"), CurrentCloudIntensity);
+	SkyAtmosphere->GetComponent()->SetRayleighScattering(CurrentAtmosphereColor);
 
 	// Stop changing once its nearly equal
 	if (FMath::IsNearlyEqual(CurrentCloudDensity, TargetCloudDensity, .0001f))
 		bChangingLighting = false;
 }
 
-void AWeatherController::SetLightingValues(const FLinearColor& AtmosphereColor, float AutoExposureBias, float CloudDensity)
+void AWeatherController::SetLightingValues(const FLinearColor& AtmosphereColor, float CloudDensity, float CloudIntensity)
 {
-	TargetAtmosphereColor  = AtmosphereColor;
-	TargetCloudDensity 	   = CloudDensity;
+	TargetAtmosphereColor = AtmosphereColor;
+	TargetCloudDensity 	  = CloudDensity;
+	TargetCloudIntensity  = CloudIntensity;
 
 	bChangingLighting = true;
 	SetActorTickEnabled(true);

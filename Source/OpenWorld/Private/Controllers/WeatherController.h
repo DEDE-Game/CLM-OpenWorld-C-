@@ -64,16 +64,18 @@ private:
 	bool bChangingLighting = false;
 
 	FLinearColor CurrentAtmosphereColor = FLinearColor(.175287f, .409607f, 1.f);
-	float CurrentCloudDensity = 0.f;
+	float CurrentCloudDensity = .1f;
+	float CurrentCloudIntensity = 1.f;
 
 	FLinearColor TargetAtmosphereColor;
-	float TargetCloudDensity;
+	float TargetCloudDensity = 1.f;
+	float TargetCloudIntensity = -1.f;
 
 	/** Make changing lightings to be smooth */
 	void ChangeLightingValues(float DeltaTime);
 
 	/** Call this to change the lighting values */
-	void SetLightingValues(const FLinearColor& AtmosphereColor, float AutoExposureBias, float CloudDensity);
+	void SetLightingValues(const FLinearColor& AtmosphereColor, float CloudDensity, float CloudIntensity);
 
 	/** Function helper to interpolate linear color constantly */
 	FLinearColor InterpLinearColor(float DeltaTime, float InterpSpeed);

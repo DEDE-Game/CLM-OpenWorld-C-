@@ -14,7 +14,7 @@ void AOWGameMode::DefaultInitializer()
 {
     // Pawn Class
     static ConstructorHelpers::FClassFinder<APawn> Pawn(
-        TEXT("/Game/Game/Blueprints/Characters/BP_GameCharacter")
+        TEXT("/Game/Game/Blueprints/Characters/BP_PlayerCharacter")
     );
     DefaultPawnClass = Pawn.Class;
 

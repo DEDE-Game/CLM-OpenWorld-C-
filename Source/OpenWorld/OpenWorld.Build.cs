@@ -9,11 +9,13 @@ public class OpenWorld : ModuleRules
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	
 		PublicDependencyModuleNames.AddRange(new string[] { 
+			"AIModule",
 			"Core", 
 			"CoreUObject", 
 			"Engine", 
 			"InputCore",
 			"EnhancedInput",
+			"NavigationSystem",
 			"Niagara"
 		});
 

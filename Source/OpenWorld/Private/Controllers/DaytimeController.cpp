@@ -9,7 +9,7 @@
 ADaytimeController::ADaytimeController()
 {
 	PrimaryActorTick.bCanEverTick = true;
-	PrimaryActorTick.TickInterval = .15f;
+	PrimaryActorTick.TickInterval = .5f;
 	bIsSpatiallyLoaded = false;
 
 	// Root
@@ -26,9 +26,10 @@ ADaytimeController::ADaytimeController()
 	MoonMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Moon Mesh"));
 	MoonMesh->PrimaryComponentTick.bCanEverTick = false;
 	MoonMesh->SetupAttachment(SunScene);
-	MoonMesh->SetRelativeLocation({ 0.f, -10000000.f, 0.f });
-	MoonMesh->SetRelativeScale3D({ 10000.f, 10000.f, 10000.f });
+	MoonMesh->SetRelativeLocation({ 0.f, -2800000.f, 0.f });
+	MoonMesh->SetRelativeScale3D({ 2500.f, 2500.f, 2500.f });
 	MoonMesh->SetCastShadow(false);
+	MoonMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> SphereMeshAsset(TEXT("StaticMesh'/Engine/BasicShapes/Sphere.Sphere'"));
 	MoonMesh->SetStaticMesh(SphereMeshAsset.Object);
@@ -84,7 +85,7 @@ void ADaytimeController::UpdateTime()
 	float Rotation = Time * (360.f / 24.f);
 	float Day	   = Rotation + 90.f;
 	float Night    = Rotation - 270.f;
-	float Angle = Time > 18.f ? Night : Day;
+	float Angle    = Time > 18.f ? Night : Day;
 
 	// Gimble Lock fix
 	FRotator CurrentRotation = GetActorRotation();
@@ -101,4 +102,6 @@ void ADaytimeController::UpdateTime()
 
 	Sun ->GetComponent()->SetVisibility(!bShouldAdjust);
 	Moon->GetComponent()->SetVisibility(bShouldAdjust);
+	MoonMesh->SetHiddenInGame(!bShouldAdjust);
+	MoonMesh->SetVisibility(bShouldAdjust);
 }

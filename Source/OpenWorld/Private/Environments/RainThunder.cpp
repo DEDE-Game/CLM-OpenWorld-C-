@@ -41,7 +41,7 @@ ARainThunder::ARainThunder()
 void ARainThunder::DefaultInitializer()
 {
 	static ConstructorHelpers::FObjectFinder<UNiagaraSystem> RainAsset(
-		TEXT("/Script/Niagara.NiagaraSystem'/Game/Game/VFX/NS_Rain.NS_Rain'")
+		TEXT("/Script/Niagara.NiagaraSystem'/Game/Game/VFX/Environments/NS_Rain.NS_Rain'")
 	);
 	RainVFX = RainAsset.Object;
 

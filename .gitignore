@@ -1,6 +1,7 @@
 .vscode
 Binaries
-Content
+Content/*
+!Content/Game/
 DerivedDataCache
 Intermediate
 Saved
