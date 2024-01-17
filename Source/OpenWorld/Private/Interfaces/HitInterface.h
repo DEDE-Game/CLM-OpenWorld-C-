@@ -6,6 +6,8 @@
 #include "UObject/Interface.h"
 #include "HitInterface.generated.h"
 
+class AOWCharacter;
+
 // This class does not need to be modified.
 UINTERFACE(MinimalAPI)
 class UHitInterface : public UInterface
@@ -22,5 +24,8 @@ public:
 
 	// ===== Combat ========== //
 
-	virtual void OnWeaponHit(class AOWCharacter* DamagingCharacter, const FVector& HitImpact) = 0;
+	/** Check is the character in 1 team with other */
+	virtual const bool IsEnemy(AOWCharacter* Other) const = 0;
+	
+	virtual void OnWeaponHit(AOWCharacter* DamagingCharacter, const FVector& HitImpact) = 0;
 };

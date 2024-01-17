@@ -25,6 +25,7 @@ public:
 
 	// ===== Combat ========== //
 
+	virtual const bool IsEnemy(AOWCharacter* Other) const override;
 	virtual void OnWeaponHit(AOWCharacter* DamagingCharacter, const FVector& ImpactPoint) override;
 
 protected:
@@ -79,9 +80,6 @@ protected:
 	float ComboOverTimer = 2.f;
 
 	FORCEINLINE void ComboOver();
-
-	/** Check is the character in 1 team with other */
-	const bool IsEnemy(AOWCharacter* Other) const;
 
 	/** Blocking opponent's attack */
 	void ToggleBlock(bool bToggled);

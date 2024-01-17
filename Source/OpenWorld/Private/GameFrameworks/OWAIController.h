@@ -6,7 +6,7 @@
 #include "AIController.h"
 #include "OWAIController.generated.h"
 
-class ACharacter;
+class AEnemyCharacter;
 
 UCLASS()
 class AOWAIController : public AAIController
@@ -19,6 +19,7 @@ public:
 	// ===== AI ========== //
 
 	void GoTo(const FVector& Location);
+	void ActivateReaction();
 
 protected:
 	// ===== Lifecycles ========== //
@@ -31,13 +32,37 @@ private:
 	// ===== References ========== //
 
 	UPROPERTY()
-	TWeakObjectPtr<ACharacter> ControlledAI;
+	TWeakObjectPtr<AEnemyCharacter> EnemyCharacter;
 
 	// ===== AI ========== //
 
 	/** Generate random target location */
 	FVector DetermineTargetLocation(const FVector& Target);
 
-	/** Get distance and direction between controlled AI and target location */
-	void GetDistanceAndDirection(const FVector& Location, float& Distance, FVector& Direction);
+	// ===== Combat ========== //
+	
+	/** Attacking */
+	UPROPERTY(EditAnywhere, Category=Combat)
+	float HitRange = 300.f;
+
+	FTimerHandle AttackDelayHandler;
+
+	UPROPERTY(EditAnywhere, Category=Combat)
+	float AttackDelayMin = 1.5f;
+
+	UPROPERTY(EditAnywhere, Category=Combat)
+	float AttackDelayMax = 2.f;
+
+	void CheckRange();
+	
+    FORCEINLINE void PerformAttack();
+
+    /** Reactions */
+    FTimerHandle ReactionDelay;
+    FORCEINLINE void FinishedReaction();
+
+	// ===== Perceptions ========== //
+
+	UFUNCTION()
+	virtual void OnTargetSense(AActor* Actor, FAIStimulus Stimulus);
 };

@@ -46,19 +46,6 @@ void AEnemyCharacter::PossessedBy(AController* NewController)
     Super::PossessedBy(NewController);
 
     AIController = Cast<AOWAIController>(NewController);
-    AIController->GetPerceptionComponent()->OnTargetPerceptionUpdated.AddDynamic(this, &ThisClass::OnTargetSense);
-}
-
-// ==================== Perceptions ==================== //
-
-void AEnemyCharacter::OnTargetSense(AActor* Actor, FAIStimulus Stimulus)
-{
-    AOWCharacter* Other = Cast<AOWCharacter>(Actor);
-
-    // If already have target...
-    if (!Other || !IsEnemy(Other) || GetWorldTimerManager().IsTimerActive(ReactionDelay)) return;
-    
-    SetLockOn(Other);
 }
 
 // ==================== Combat ==================== //
@@ -72,7 +59,7 @@ void AEnemyCharacter::OnWeaponHit(AOWCharacter* DamagingCharacter, const FVector
         TargetCombat = DamagingCharacter;
 
         // Make the enemy lock to that damaging actor with delay to give a time for hit reaction
-        GetWorldTimerManager().SetTimer(ReactionDelay, this, &ThisClass::FinishedReaction, .35f);
+        AIController->ActivateReaction();
     }
 }
 
@@ -81,13 +68,6 @@ void AEnemyCharacter::SetLockOn(AOWCharacter* Target)
     Super::SetLockOn(Target);
 
     if (!bEquipWeapon) SwapWeapon(1);
-    AIController->MoveToLocation(Target->GetActorLocation(), 150.f);
-
-    FTimerHandle AttackDelay;
-    GetWorldTimerManager().SetTimer(AttackDelay, this, &ThisClass::Attack, 4.f);
-}
-
-void AEnemyCharacter::FinishedReaction()
-{
-    SetLockOn(TargetCombat.Get());
+    
+    AIController->GoTo(Target->GetActorLocation());
 }

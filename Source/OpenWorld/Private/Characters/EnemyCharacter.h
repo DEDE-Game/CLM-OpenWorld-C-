@@ -18,7 +18,9 @@ class AEnemyCharacter : public AOWCharacter
 public:
 	AEnemyCharacter();
 
-	// ===== Lifecycles ========== //
+	friend class AOWAIController;
+
+	// ===== Lifecycle ========== //
 
 	virtual void PossessedBy(AController* NewController) override;
 
@@ -43,19 +45,10 @@ protected:
 
 	// ===== Combat ========== //
 
-	UPROPERTY(EditDefaultsOnly, Category=Combat)
+	UPROPERTY(EditAnywhere, Category=Combat)
 	TSubclassOf<AWeapon> GivenWeapon;
 
 	virtual void SetLockOn(AOWCharacter* Target) override;
-
-	FTimerHandle ReactionDelay;
-	
-	FORCEINLINE void FinishedReaction();
-
-	// ===== Perceptions ========== //
-
-	UFUNCTION()
-	virtual void OnTargetSense(AActor* Actor, FAIStimulus Stimulus);
 
 private:
 	void DefaultInitializer();

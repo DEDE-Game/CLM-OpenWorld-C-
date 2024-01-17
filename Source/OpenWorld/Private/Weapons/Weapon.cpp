@@ -10,6 +10,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "NiagaraComponent.h"
 #include "NiagaraFunctionLibrary.h"
+#include "Weapon.h"
 
 AWeapon::AWeapon()
 {
@@ -61,30 +62,33 @@ void AWeapon::OnWeaponOverlap(UPrimitiveComponent* OverlappedComponent, AActor* 
 {
 	if (OtherActor == GetOwner()) return;
 
-	// Perform hit Trace
 	FHitResult TraceResult;
     HitTrace(TraceResult);
-
-	if (IHitInterface* ActorHit = Cast<IHitInterface>(TraceResult.GetActor()))
-	{
-		// Apply damage
-		ActorHit->OnWeaponHit(CharacterOwner.Get(), TraceResult.ImpactPoint);
-
-		// Spawn blood trail
-		BloodTrailComponent = UNiagaraFunctionLibrary::SpawnSystemAttached(
-			BloodTrail.LoadSynchronous(),
-			BaseMesh,
-			TEXT("EndSocket"),
-			FVector::ZeroVector,
-			FRotator::ZeroRotator,
-			EAttachLocation::KeepRelativeOffset,
-			true
-		);
-		BloodTrailComponent->Activate();
-		BloodTrailComponent->SetVariableObject(TEXT("User.ObjCollisionCallback"), this);
-	}
+    ApplyDamage(TraceResult);
 }
 
+void AWeapon::ApplyDamage(FHitResult &TraceResult)
+{
+	IHitInterface* ActorHit = Cast<IHitInterface>(TraceResult.GetActor());
+
+	// Only applying damage if other is enemy and damagable
+	if (!ActorHit || !ActorHit->IsEnemy(CharacterOwner.Get())) return;
+	
+	// Apply damage
+	ActorHit->OnWeaponHit(CharacterOwner.Get(), TraceResult.ImpactPoint);
+
+	// Spawn blood trail
+	BloodTrailComponent = UNiagaraFunctionLibrary::SpawnSystemAttached(
+		BloodTrail.LoadSynchronous(),
+		BaseMesh,
+		TEXT("EndSocket"),
+		FVector::ZeroVector,
+		FRotator::ZeroRotator,
+		EAttachLocation::KeepRelativeOffset,
+		true);
+	BloodTrailComponent->Activate();
+	BloodTrailComponent->SetVariableObject(TEXT("User.ObjCollisionCallback"), this);
+}
 void AWeapon::HitTrace(FHitResult& TraceResult)
 {
     FVector Offset = CollisionBox->GetUpVector() * CollisionBox->GetScaledBoxExtent().Z;

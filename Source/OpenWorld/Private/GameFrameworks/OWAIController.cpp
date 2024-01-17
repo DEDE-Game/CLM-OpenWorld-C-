@@ -1,12 +1,13 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "GameFrameworks/OWAIController.h"
-#include "GameFramework/Character.h"
+#include "Characters/EnemyCharacter.h"
 #include "NavigationSystem.h"
 #include "Navigation/PathFollowingComponent.h"
 #include "Perception/AIPerceptionComponent.h"
 #include "Perception/AISenseConfig_Sight.h"
 #include "Perception/AISenseConfig_Hearing.h"
+#include "OWAIController.h"
 
 AOWAIController::AOWAIController()
 {
@@ -39,7 +40,7 @@ AOWAIController::AOWAIController()
 
 void AOWAIController::ReferencesInitializer()
 {
-    ControlledAI = Cast<ACharacter>(GetPawn());
+    EnemyCharacter = Cast<AEnemyCharacter>(GetPawn());
 }
 
 // ==================== Lifecycles ==================== //
@@ -47,6 +48,9 @@ void AOWAIController::ReferencesInitializer()
 void AOWAIController::BeginPlay()
 {
     Super::BeginPlay();
+
+    // Events
+    GetPerceptionComponent()->OnTargetPerceptionUpdated.AddDynamic(this, &ThisClass::OnTargetSense);
 
     // ...
     ReferencesInitializer();
@@ -56,22 +60,22 @@ void AOWAIController::BeginPlay()
 
 void AOWAIController::GoTo(const FVector& Location)
 {
-    FVector FinalTarget = DetermineTargetLocation(Location);
+    EPathFollowingRequestResult::Type Result = MoveToLocation(Location, 200.f, false);
 
-    FAIMoveRequest Request;
-    Request.SetGoalLocation(FinalTarget);
-    Request.SetAcceptanceRadius(200.f);
+    // Then attack if success
+    bool bCanAttack = Result != EPathFollowingRequestResult::Failed && EnemyCharacter->TargetCombat.IsValid();
 
-    FPathFollowingRequestResult Result = MoveTo(Request);
-    bool bSuccess = Result.Code == EPathFollowingRequestResult::RequestSuccessful;
-UE_LOG(LogTemp, Warning, TEXT("Target: %s"), bSuccess?TEXT("Yes"):TEXT("No"));
-    if (!bSuccess)
-    {
-        FVector Vector = (Location - ControlledAI->GetActorLocation());
-        float Distance = Vector.Length();
+    if (bCanAttack) PerformAttack();
+}
 
-        if (Distance >= 200.f) GoTo(FinalTarget);
-    }
+void AOWAIController::ActivateReaction()
+{
+    GetWorldTimerManager().SetTimer(
+        ReactionDelay,
+        this,
+        &ThisClass::FinishedReaction,
+        .5f
+    );
 }
 
 FVector AOWAIController::DetermineTargetLocation(const FVector& Target)
@@ -87,7 +91,7 @@ FVector AOWAIController::DetermineTargetLocation(const FVector& Target)
         InResult
     );
 
-    FVector Vector    = InResult.Location - ControlledAI->GetActorLocation();
+    FVector Vector    = InResult.Location - EnemyCharacter->GetActorLocation();
     FVector Direction = Vector.GetSafeNormal();
     float Distance    = Vector.Length();
 
@@ -97,10 +101,50 @@ FVector AOWAIController::DetermineTargetLocation(const FVector& Target)
     FNavLocation OutResult;
 
     NavSystem->GetRandomReachablePointInRadius(
-        ControlledAI->GetActorLocation() + Direction * 1500.f,
+        EnemyCharacter->GetActorLocation() + Direction * 1500.f,
         100.f,
         OutResult
     );
 
     return OutResult.Location;
+}
+
+// ==================== Perceptions ==================== //
+
+void AOWAIController::OnTargetSense(AActor* Actor, FAIStimulus Stimulus)
+{
+    AOWCharacter* Other = Cast<AOWCharacter>(Actor);
+
+    // If already have target...
+    if (!Other || !EnemyCharacter->IsEnemy(Other) || GetWorldTimerManager().IsTimerActive(ReactionDelay)) return;
+    
+    EnemyCharacter->SetLockOn(Other);
+}
+
+// ==================== Combat ==================== //
+
+void AOWAIController::CheckRange()
+{
+    FVector CharacterLocation = EnemyCharacter->GetActorLocation();
+    FVector TargetLocation    = EnemyCharacter->TargetCombat->GetActorLocation();
+
+    float Distance = (TargetLocation - CharacterLocation).Size();
+
+    if   (Distance <= HitRange)
+    {
+        PerformAttack();
+        EnemyCharacter->Attack();
+    } 
+    else GoTo(TargetLocation);
+}
+
+void AOWAIController::PerformAttack()
+{
+    float AttackTimer = FMath::RandRange(AttackDelayMin, AttackDelayMax);
+    GetWorldTimerManager().SetTimer(AttackDelayHandler, this, &ThisClass::CheckRange, AttackTimer);
+}
+
+void AOWAIController::FinishedReaction()
+{
+    EnemyCharacter->SetLockOn(EnemyCharacter->TargetCombat.Get());
 }

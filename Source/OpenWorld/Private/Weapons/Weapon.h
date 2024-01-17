@@ -59,14 +59,15 @@ protected:
 	TWeakObjectPtr<AOWCharacter> CharacterOwner;
 
 	UPROPERTY()
-	TArray<AActor*> IgnoredActors;
+    TArray<AActor *> IgnoredActors;
 
-	void HitTrace(FHitResult &TraceResult);
+	void ApplyDamage(FHitResult &TraceResult);
+    void HitTrace(FHitResult &TraceResult);
 
-	// ===== VFX ========== //
+    // ===== VFX ========== //
 
-	UPROPERTY(EditDefaultsOnly, Category=VFX)
-	TSoftObjectPtr<UNiagaraSystem> BloodTrail;
+    UPROPERTY(EditDefaultsOnly, Category = VFX)
+    TSoftObjectPtr<UNiagaraSystem> BloodTrail;
 
 	UPROPERTY(EditDefaultsOnly, Category=VFX)
 	TSoftObjectPtr<UMaterialInterface> BloodSplatter;

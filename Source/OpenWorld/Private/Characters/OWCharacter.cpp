@@ -209,14 +209,18 @@ void AOWCharacter::Attack()
 
 void AOWCharacter::OnWeaponHit(AOWCharacter* DamagingCharacter, const FVector& ImpactPoint)
 {
-	if (!Montages.Contains("Hit React") || !IsEnemy(DamagingCharacter)) return;
+	if (!Montages.Contains("Hit React")) return;
 
 	// Hit React
 	HitReaction(ImpactPoint);
 
-	// Show hit flesh
+	// Reset combat
+	ToggleMovement(true);
+	EnableWeapon(false);
+
+	// Show hit visualization
 	UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, BloodSplash.LoadSynchronous(), ImpactPoint);
-	UGameplayStatics::PlaySoundAtLocation(this, HitfleshSound.LoadSynchronous(), ImpactPoint);
+	UGameplayStatics	   ::PlaySoundAtLocation(this, HitfleshSound.LoadSynchronous(), ImpactPoint);
 }
 
 // ==================== Audio ==================== //
