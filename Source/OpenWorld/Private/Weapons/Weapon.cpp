@@ -7,6 +7,7 @@
 #include "GameFramework/Character.h"
 #include "Interfaces/HitInterface.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Kismet/GameplayStatics.h"
 #include "NiagaraComponent.h"
 #include "NiagaraFunctionLibrary.h"
 
@@ -69,9 +70,7 @@ void AWeapon::OnWeaponOverlap(UPrimitiveComponent* OverlappedComponent, AActor* 
 		// Apply damage
 		ActorHit->OnWeaponHit(CharacterOwner.Get(), TraceResult.ImpactPoint);
 
-		// Spawn blood trail, make sure to remove the old one if exists
-		if (BloodTrailComponent) BloodTrailComponent->DestroyComponent();
-
+		// Spawn blood trail
 		BloodTrailComponent = UNiagaraFunctionLibrary::SpawnSystemAttached(
 			BloodTrail.LoadSynchronous(),
 			BaseMesh,
@@ -81,8 +80,8 @@ void AWeapon::OnWeaponOverlap(UPrimitiveComponent* OverlappedComponent, AActor* 
 			EAttachLocation::KeepRelativeOffset,
 			true
 		);
-
 		BloodTrailComponent->Activate();
+		BloodTrailComponent->SetVariableObject(TEXT("User.ObjCollisionCallback"), this);
 	}
 }
 
@@ -133,5 +132,21 @@ void AWeapon::EnableCollision(bool bEnabled)
 	if (!bEnabled)
 	{
 		IgnoredActors.Empty();
+	}
+}
+
+void AWeapon::ReceiveParticleData_Implementation(const TArray<FBasicParticleData>& Data, UNiagaraSystem* NiagaraSystem, const FVector& SimulationPositionOffset)
+{
+	// Spawn a blood splatter
+	for (auto& Dat : Data)
+	{
+		UGameplayStatics::SpawnDecalAtLocation(
+			this,
+			BloodSplatter.LoadSynchronous(),
+			{ 5.f, 10.f, 10.f },
+			Dat.Position,
+			FRotator(-90.f, 0.f, 0.f),
+			5.f
+		);
 	}
 }

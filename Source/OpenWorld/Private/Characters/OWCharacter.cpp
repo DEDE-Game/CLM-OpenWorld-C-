@@ -21,7 +21,15 @@ AOWCharacter::AOWCharacter()
 	GetMesh()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Visibility, ECollisionResponse::ECR_Block);
 
 	// Movement
+	/* General */
 	GetCharacterMovement()->bOrientRotationToMovement = true;
+	GetCharacterMovement()->MaxAcceleration = 500.f;
+
+	/* Walking */
+	GetCharacterMovement()->GroundFriction = 1.f;
+	GetCharacterMovement()->BrakingDecelerationWalking = 100.f;
+	/* Crouching */
+	GetCharacterMovement()->NavAgentProps.bCanCrouch = true;
 
 	// ...
 	DefaultInitializer();
@@ -168,8 +176,8 @@ void AOWCharacter::HitReaction(const FVector& ImpactPoint)
 	FName MontageSection = *FString::Printf(TEXT("From%d"), FMath::FloorToInt32(RadAngle));
 	PlayAnimMontage(Montages["Hit React"].LoadSynchronous(), 1.f, MontageSection);
 
-	// Kontal (Forgot the english term)
-	GetCharacterMovement()->AddImpulse(-Forward * 2000.f, true);
+	// Knock back
+	GetCharacterMovement()->AddImpulse(-HitDirection * 400.f, true);
 }
 
 void AOWCharacter::ComboOver()

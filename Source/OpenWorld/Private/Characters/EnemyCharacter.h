@@ -50,7 +50,7 @@ protected:
 
 	FTimerHandle ReactionDelay;
 	
-	void FinishedReaction();
+	FORCEINLINE void FinishedReaction();
 
 	// ===== Perceptions ========== //
 

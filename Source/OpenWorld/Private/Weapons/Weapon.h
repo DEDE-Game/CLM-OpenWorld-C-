@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "NiagaraDataInterfaceExport.h"
 #include "Weapon.generated.h"
 
 class AOWCharacter;
@@ -11,8 +12,11 @@ class UBoxComponent;
 class UNiagaraComponent;
 class UNiagaraSystem;
 
+/**
+ * Implements that interface to make able to spawn blood decal 
+ */
 UCLASS()
-class AWeapon : public AActor
+class AWeapon : public AActor, public INiagaraParticleCallbackHandler
 {
 	GENERATED_BODY()
 	
@@ -26,7 +30,7 @@ public:
 	// ===== Combat ========== //
 
 	void EnableCollision(bool bEnabled);
-	
+	virtual void ReceiveParticleData_Implementation(const TArray<FBasicParticleData>& Data, UNiagaraSystem* NiagaraSystem, const FVector& SimulationPositionOffset) override;
 
 protected:
 	// ===== Lifecycles ========== //
@@ -63,6 +67,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category=VFX)
 	TSoftObjectPtr<UNiagaraSystem> BloodTrail;
+
+	UPROPERTY(EditDefaultsOnly, Category=VFX)
+	TSoftObjectPtr<UMaterialInterface> BloodSplatter;
 
 private:
 	void DefaultInitializer();

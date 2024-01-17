@@ -56,8 +56,8 @@ void AEnemyCharacter::OnTargetSense(AActor* Actor, FAIStimulus Stimulus)
     AOWCharacter* Other = Cast<AOWCharacter>(Actor);
 
     // If already have target...
-    if (!Other || !IsEnemy(Other)) return;
-
+    if (!Other || !IsEnemy(Other) || GetWorldTimerManager().IsTimerActive(ReactionDelay)) return;
+    
     SetLockOn(Other);
 }
 
@@ -67,10 +67,13 @@ void AEnemyCharacter::OnWeaponHit(AOWCharacter* DamagingCharacter, const FVector
 {
     Super::OnWeaponHit(DamagingCharacter, HitImpact);
 
-    TargetCombat = DamagingCharacter;
+    if (!TargetCombat.IsValid())
+    {
+        TargetCombat = DamagingCharacter;
 
-    // Make the enemy lock to that damaging actor with delay to give a time for hit reaction
-    GetWorldTimerManager().SetTimer(ReactionDelay, this, &ThisClass::FinishedReaction, .4f);
+        // Make the enemy lock to that damaging actor with delay to give a time for hit reaction
+        GetWorldTimerManager().SetTimer(ReactionDelay, this, &ThisClass::FinishedReaction, .35f);
+    }
 }
 
 void AEnemyCharacter::SetLockOn(AOWCharacter* Target)
@@ -79,6 +82,9 @@ void AEnemyCharacter::SetLockOn(AOWCharacter* Target)
 
     if (!bEquipWeapon) SwapWeapon(1);
     AIController->MoveToLocation(Target->GetActorLocation(), 150.f);
+
+    FTimerHandle AttackDelay;
+    GetWorldTimerManager().SetTimer(AttackDelay, this, &ThisClass::Attack, 4.f);
 }
 
 void AEnemyCharacter::FinishedReaction()

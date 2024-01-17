@@ -14,16 +14,6 @@
 
 APlayerCharacter::APlayerCharacter()
 {
-	// Movement
-	/* General */
-	GetCharacterMovement()->MaxAcceleration = 500.f;
-
-	/* Walking */
-	GetCharacterMovement()->GroundFriction = 1.f;
-	GetCharacterMovement()->BrakingDecelerationWalking = 100.f;
-	/* Crouching */
-	GetCharacterMovement()->NavAgentProps.bCanCrouch = true;
-
 	// Spring Arm
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("Spring Arm"));
 	SpringArm->SetupAttachment(RootComponent);
