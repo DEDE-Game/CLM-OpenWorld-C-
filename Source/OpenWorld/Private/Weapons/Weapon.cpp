@@ -77,17 +77,20 @@ void AWeapon::ApplyDamage(FHitResult &TraceResult)
 	// Apply damage
 	ActorHit->OnWeaponHit(CharacterOwner.Get(), TraceResult.ImpactPoint);
 
-	// Spawn blood trail
-	BloodTrailComponent = UNiagaraFunctionLibrary::SpawnSystemAttached(
-		BloodTrail.LoadSynchronous(),
-		BaseMesh,
-		TEXT("EndSocket"),
-		FVector::ZeroVector,
-		FRotator::ZeroRotator,
-		EAttachLocation::KeepRelativeOffset,
-		true);
-	BloodTrailComponent->Activate();
-	BloodTrailComponent->SetVariableObject(TEXT("User.ObjCollisionCallback"), this);
+	// Spawn blood trail only when oponent is not blocking the attack
+	if (!ActorHit->IsBlocking())
+	{
+		BloodTrailComponent = UNiagaraFunctionLibrary::SpawnSystemAttached(
+			BloodTrail.LoadSynchronous(),
+			BaseMesh,
+			TEXT("EndSocket"),
+			FVector::ZeroVector,
+			FRotator::ZeroRotator,
+			EAttachLocation::KeepRelativeOffset,
+			true);
+		BloodTrailComponent->Activate();
+		BloodTrailComponent->SetVariableObject(TEXT("User.ObjCollisionCallback"), this);
+	}
 }
 void AWeapon::HitTrace(FHitResult& TraceResult)
 {

@@ -218,6 +218,9 @@ void APlayerCharacter::Block(const FInputActionValue& InputValue)
 	const bool Value = InputValue.Get<bool>();
 
 	ToggleBlock(Value);
+
+	// Make player lock at nearest enemy
+	if (Value) LockNearest();
 }
 
 void APlayerCharacter::ChangeWeapon(const FInputActionValue& InputValue)

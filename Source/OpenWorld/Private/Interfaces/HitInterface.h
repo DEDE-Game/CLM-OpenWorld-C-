@@ -25,7 +25,10 @@ public:
 	// ===== Combat ========== //
 
 	/** Check is the character in 1 team with other */
-	virtual const bool IsEnemy(AOWCharacter* Other) const = 0;
+	FORCEINLINE virtual const bool IsEnemy(AOWCharacter* Other) const = 0;
+
+	/** Check is the character on blocking state */
+	FORCEINLINE virtual const bool IsBlocking() const = 0;
 	
 	virtual void OnWeaponHit(AOWCharacter* DamagingCharacter, const FVector& HitImpact) = 0;
 };

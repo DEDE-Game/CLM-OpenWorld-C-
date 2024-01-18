@@ -25,8 +25,12 @@ public:
 
 	// ===== Combat ========== //
 
-	virtual const bool IsEnemy(AOWCharacter* Other) const override;
 	virtual void OnWeaponHit(AOWCharacter* DamagingCharacter, const FVector& ImpactPoint) override;
+	virtual const bool IsEnemy(AOWCharacter* Other) const override;
+	virtual const bool IsBlocking() const override
+	{
+		return bSucceedBlocking;
+	}
 
 protected:
 	// ===== Lifecycles ========== //
@@ -71,6 +75,7 @@ protected:
 	TWeakObjectPtr<AOWCharacter> TargetCombat;
 
 	bool bEquipWeapon = false;
+	bool bSucceedBlocking = false;
 
 	/** Combo */
 	int8 AttackCount  = 0;
@@ -120,6 +125,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category=Audio)
 	TSoftObjectPtr<USoundBase> HitfleshSound;
+
+	UPROPERTY(EditDefaultsOnly, Category=Audio)
+	TSoftObjectPtr<USoundBase> BlockingSound;
 
 	UFUNCTION(BlueprintCallable)
 	void PlayFootstepSound();

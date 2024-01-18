@@ -42,6 +42,11 @@ void AOWCharacter::DefaultInitializer()
 	);
 	HitfleshSound = HitfleshAsset.Object;
 
+	static ConstructorHelpers::FObjectFinder<USoundBase> BlockingAsset(
+		TEXT("/Script/MetasoundEngine.MetaSoundSource'/Game/Game/Audio/Combats/MS_Blocking.MS_Blocking'")
+	);
+	BlockingSound = BlockingAsset.Object;
+
 	static ConstructorHelpers::FObjectFinder<UNiagaraSystem> BloodSplashAsset(
 		TEXT("/Script/Niagara.NiagaraSystem'/Game/Game/VFX/Combat/NS_BloodSplash.NS_BloodSplash'")
 	);
@@ -111,6 +116,10 @@ void AOWCharacter::ToggleBlock(bool bToggled)
 
 	if (bToggled) PlayAnimMontage(Montages["Blocking"].LoadSynchronous());
 	else		  StopAnimMontage(Montages["Blocking"].LoadSynchronous());
+
+	// Reset combat
+	ToggleMovement(true);
+	EnableWeapon(false);
 }
 
 void AOWCharacter::EnableWeapon(bool bEnabled)
@@ -164,20 +173,28 @@ void AOWCharacter::LockOn()
 
 void AOWCharacter::HitReaction(const FVector& ImpactPoint)
 {
+	if (!Montages.Contains("Blocking") || !Montages.Contains("Hit React")) return;
+
+	// Get datas
 	FVector CurrentLocation = GetActorLocation();
 	FVector Forward         = GetActorForwardVector();
 	FVector HitDirection    = (ImpactPoint - CurrentLocation).GetSafeNormal2D();
 
 	// Depends on rad angle...its 0: Front; 1: Left; 2: Right; 3: Back
 	float DotProduct = FVector::DotProduct(Forward, HitDirection);
-	float RadAngle   = FMath::Acos(DotProduct);
+	int32 RadAngle   = FMath::FloorToInt32(FMath::Acos(DotProduct));
 
-	// Animation Montage
-	FName MontageSection = *FString::Printf(TEXT("From%d"), FMath::FloorToInt32(RadAngle));
-	PlayAnimMontage(Montages["Hit React"].LoadSynchronous(), 1.f, MontageSection);
+	// Check if the player succeed block the hit
+	bSucceedBlocking = GetCurrentMontage() == Montages["Blocking"].Get() && RadAngle == 0;
+
+	// Animation Montage (Depends on succeed blocking or no)
+	FName MontageToPlay  = bSucceedBlocking ? TEXT("Blocking") : TEXT("Hit React");
+	FName MontageSection = bSucceedBlocking ? TEXT("Blocking") : *FString::Printf(TEXT("From%d"), RadAngle);
+	PlayAnimMontage(Montages[MontageToPlay].LoadSynchronous(), 1.f, MontageSection);
 
 	// Knock back
-	GetCharacterMovement()->AddImpulse(-HitDirection * 400.f, true);
+	float KnockbackPower = bSucceedBlocking ? 200.f : 400.f;
+	GetCharacterMovement()->AddImpulse(-HitDirection * KnockbackPower, true);
 }
 
 void AOWCharacter::ComboOver()
@@ -219,8 +236,14 @@ void AOWCharacter::OnWeaponHit(AOWCharacter* DamagingCharacter, const FVector& I
 	EnableWeapon(false);
 
 	// Show hit visualization
-	UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, BloodSplash.LoadSynchronous(), ImpactPoint);
-	UGameplayStatics	   ::PlaySoundAtLocation(this, HitfleshSound.LoadSynchronous(), ImpactPoint);
+	if (!bSucceedBlocking) UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, BloodSplash.LoadSynchronous(), ImpactPoint);
+
+	// Sound (Blocking or hitflesh sound)
+	UGameplayStatics::PlaySoundAtLocation(
+		this, 
+		bSucceedBlocking ? BlockingSound.LoadSynchronous() : HitfleshSound.LoadSynchronous(), 
+		ImpactPoint
+	);
 }
 
 // ==================== Audio ==================== //
