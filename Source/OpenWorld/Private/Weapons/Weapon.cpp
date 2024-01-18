@@ -145,7 +145,7 @@ void AWeapon::EnableCollision(bool bEnabled)
 void AWeapon::ReceiveParticleData_Implementation(const TArray<FBasicParticleData>& Data, UNiagaraSystem* NiagaraSystem, const FVector& SimulationPositionOffset)
 {
 	// Spawn a blood splatter
-	for (auto& Dat : Data)
+	for (const auto& Dat : Data)
 	{
 		UGameplayStatics::SpawnDecalAtLocation(
 			this,

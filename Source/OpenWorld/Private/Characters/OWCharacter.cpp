@@ -65,7 +65,7 @@ void AOWCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	LockOn();
+	LockOn(DeltaTime);
 }
 
 // ==================== Locomotions ==================== //
@@ -157,13 +157,14 @@ void AOWCharacter::SetLockOn(AOWCharacter* Target)
 	ToggleWalk(TargetCombat.IsValid());
 }
 
-void AOWCharacter::LockOn()
+void AOWCharacter::LockOn(float DeltaTime)
 {
 	if (!TargetCombat.IsValid()) return;
 
 	FRotator CurrentRotation = GetActorRotation();
 	FRotator NewRotation 	 = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), TargetCombat->GetActorLocation());
-	
+	NewRotation 		     = FMath::RInterpTo(CurrentRotation, NewRotation, DeltaTime, 5.f);
+
 	// Only takes the new Yaw
 	NewRotation.Pitch = CurrentRotation.Pitch;
 	NewRotation.Roll  = CurrentRotation.Roll;

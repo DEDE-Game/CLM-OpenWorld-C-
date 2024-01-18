@@ -77,6 +77,11 @@ void APlayerCharacter::DefaultInitializer()
 	);
 	BlockAction = BlockActionAsset.Object;
 
+	static ConstructorHelpers::FObjectFinder<UInputAction> DodgeActionAsset(
+		TEXT("/Script/EnhancedInput.InputAction'/Game/Game/Inputs/IA_Dodge.IA_Dodge'")
+	);
+	DodgeAction = DodgeActionAsset.Object;
+
 	static ConstructorHelpers::FObjectFinder<UMaterialParameterCollection> GlobalParamAsset(
 		TEXT("/Script/Engine.MaterialParameterCollection'/Game/Game/Materials/MP_Global.MP_Global'")
 	);
@@ -113,7 +118,9 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent *PlayerInputCom
 	if (UEnhancedInputComponent *EnhancedInput = Cast<UEnhancedInputComponent>(PlayerInputComponent))
 	{
 		EnhancedInput->BindAction(LookAction.LoadSynchronous(), ETriggerEvent::Triggered, this, &ThisClass::Look);
+
 		EnhancedInput->BindAction(MoveAction.LoadSynchronous(), ETriggerEvent::Triggered, this, &ThisClass::Move);
+		EnhancedInput->BindAction(MoveAction.LoadSynchronous(), ETriggerEvent::Completed, this, &ThisClass::Move);
 
 		EnhancedInput->BindAction(SprintAction.LoadSynchronous(), ETriggerEvent::Started, this, &ThisClass::Sprint);
 		EnhancedInput->BindAction(SprintAction.LoadSynchronous(), ETriggerEvent::Completed, this, &ThisClass::Sprint);
@@ -132,6 +139,8 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent *PlayerInputCom
 
 		EnhancedInput->BindAction(BlockAction.LoadSynchronous(), ETriggerEvent::Started, this, &ThisClass::Block);
 		EnhancedInput->BindAction(BlockAction.LoadSynchronous(), ETriggerEvent::Completed, this, &ThisClass::Block);
+
+		EnhancedInput->BindAction(DodgeAction.LoadSynchronous(), ETriggerEvent::Triggered, this, &ThisClass::Dodge);
 	}
 }
 
@@ -156,7 +165,7 @@ void APlayerCharacter::Move(const FInputActionValue &InputValue)
 {
 	if (!bCanMove) return;
 
-	const FVector2D Value = InputValue.Get<FVector2D>();
+	MovementInput = InputValue.Get<FVector2D>();
 
 	// Getting Controller's Yaw rotation only
 	FRotator Rotation = GetController()->GetControlRotation();
@@ -164,11 +173,11 @@ void APlayerCharacter::Move(const FInputActionValue &InputValue)
 
 	// Moving Y Axis depends on the character rotation
 	const FVector ForwardDirection = FRotationMatrix(Rotation).GetUnitAxis(EAxis::X);
-	AddMovementInput(ForwardDirection, Value.Y);
+	AddMovementInput(ForwardDirection, MovementInput.Y);
 
 	// Moving X Axis depends on the character rotation
 	const FVector RightDirection = FRotationMatrix(Rotation).GetUnitAxis(EAxis::Y);
-	AddMovementInput(RightDirection, Value.X);
+	AddMovementInput(RightDirection, MovementInput.X);
 }
 
 void APlayerCharacter::Sprint(const FInputActionValue &InputValue)
@@ -228,6 +237,17 @@ void APlayerCharacter::ChangeWeapon(const FInputActionValue& InputValue)
 	float Value = InputValue.Get<float>();
 
 	SwapWeapon(Value);
+}
+
+void APlayerCharacter::Dodge()
+{
+	// We're only able to dodge in combat and also with WASD key for directional dodge
+	if (!TargetCombat.IsValid() || MovementInput == FVector2D::ZeroVector) return;
+
+	// Play Montage
+	FName SectionName = *FString::Printf(TEXT("%d%d"), FMath::FloorToInt32(MovementInput.X), FMath::FloorToInt32(MovementInput.Y));
+
+	PlayAnimMontage(Montages["Dodging"].LoadSynchronous(), 1.f, SectionName);
 }
 
 void APlayerCharacter::LockNearest()

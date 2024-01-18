@@ -80,7 +80,12 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category=Input)
 	TSoftObjectPtr<UInputAction> BlockAction;
 
+	UPROPERTY(EditDefaultsOnly, Category=Input)
+	TSoftObjectPtr<UInputAction> DodgeAction;
+
 	// ===== Locomotions ========== //
+
+	FVector2D MovementInput;
 
 	void Look(const FInputActionValue &InputValue);
 	void Move(const FInputActionValue &InputValue);
@@ -99,6 +104,8 @@ private:
 
 	FORCEINLINE void Block(const FInputActionValue& InputValue);
 	FORCEINLINE void ChangeWeapon(const FInputActionValue& InputValue);
+
+	void Dodge();
 
 	/** Find nearest enemy then lock to him */
 	void LockNearest();

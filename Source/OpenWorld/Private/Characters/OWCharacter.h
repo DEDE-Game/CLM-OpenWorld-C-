@@ -106,7 +106,7 @@ protected:
 	 */
 	virtual void SetLockOn(AOWCharacter* Target);
 
-	void LockOn();
+	void LockOn(float DeltaTime);
 
 	void HitReaction(const FVector& ImpactPoint);
 
