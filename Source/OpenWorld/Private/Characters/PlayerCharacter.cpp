@@ -242,7 +242,11 @@ void APlayerCharacter::ChangeWeapon(const FInputActionValue& InputValue)
 void APlayerCharacter::Dodge()
 {
 	// We're only able to dodge in combat and also with WASD key for directional dodge
-	if (!TargetCombat.IsValid() || MovementInput == FVector2D::ZeroVector) return;
+	if (!TargetCombat.IsValid() || MovementInput.Size() != 1.f) return;
+
+	// Reset Combat
+	ToggleMovement(true);
+	EnableWeapon(false);
 
 	// Play Montage
 	FName SectionName = *FString::Printf(TEXT("%d%d"), FMath::FloorToInt32(MovementInput.X), FMath::FloorToInt32(MovementInput.Y));

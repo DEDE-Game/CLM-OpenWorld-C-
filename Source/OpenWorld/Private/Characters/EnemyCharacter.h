@@ -6,7 +6,7 @@
 #include "Characters/OWCharacter.h"
 #include "EnemyCharacter.generated.h"
 
-class AOWAIController;
+class AEnemyController;
 class AWeapon;
 class UNavigationInvokerComponent;
 
@@ -18,21 +18,22 @@ class AEnemyCharacter : public AOWCharacter
 public:
 	AEnemyCharacter();
 
-	friend class AOWAIController;
+	friend class AEnemyController;
 
 	// ===== Lifecycle ========== //
 
 	virtual void PossessedBy(AController* NewController) override;
+	virtual void Destroyed() override;
 
 	// ===== Combat ========== //
 
-	virtual void OnWeaponHit(AOWCharacter* DamagingCharacter, const FVector& HitImpact) override;
+	virtual void OnWeaponHit(AOWCharacter* DamagingCharacter, const FVector& HitImpact, const float GivenDamage) override;
 
 protected:
 	// ===== References ========== //
 
 	UPROPERTY()
-	TWeakObjectPtr<AOWAIController> AIController;
+	TWeakObjectPtr<AEnemyController> EnemyController;
 
 	// ===== Lifecycles ========== //
 

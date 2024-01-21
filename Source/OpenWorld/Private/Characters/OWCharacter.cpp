@@ -1,6 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Characters/OWCharacter.h"
+#include "Components/CapsuleComponent.h"
 #include "Enums/CollisionChannel.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -98,7 +99,33 @@ void AOWCharacter::ToggleCrouch(bool bToggled)
 
 void AOWCharacter::MoveForward()
 {
-	GetCharacterMovement()->AddImpulse(GetActorForwardVector() * 200.f, true);
+	GetCharacterMovement()->AddImpulse(GetActorForwardVector() * 400.f, true);
+}
+
+// ==================== Attributes ==================== //
+
+void AOWCharacter::Die()
+{
+	if (!Montages.Contains("Die")) return;
+
+	// Make sure to remove anything left
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	GetWorldTimerManager().ClearAllTimersForObject(this);
+	GetWorldTimerManager().ClearAllTimersForObject(GetController());
+	GetController()->UnPossess();
+	SetActorTickEnabled(false);
+
+	// ...
+	PlayAnimMontage(Montages["Die"].LoadSynchronous());
+	SetLifeSpan(8.f);
+
+	// Enable rag doll
+	FTimerHandle RagdollTimerHandle;
+	GetWorldTimerManager().SetTimer(RagdollTimerHandle, [this]() {
+		GetMesh()->SetCollisionProfileName(TEXT("Ragdoll"));
+		GetMesh()->SetSimulatePhysics(true);
+		CarriedWeapon->Drop();
+	}, 1.f, false);
 }
 
 // ==================== Combat ==================== //
@@ -131,6 +158,7 @@ void AOWCharacter::EnableWeapon(bool bEnabled)
 
 void AOWCharacter::AttachWeapon()
 {
+	bEquipWeapon 	  = !bEquipWeapon;
 	FName SocketName  = bEquipWeapon ? TEXT("Hand Socket") : TEXT("Back Socket");
 
 	CarriedWeapon->EquipTo(this, SocketName);
@@ -142,10 +170,9 @@ void AOWCharacter::SwapWeapon(float Value)
 
 	// Determine which section to play the montage
 	FName SectionName = bEquipWeapon ? TEXT("Unequip") : TEXT("Equip");
-	bEquipWeapon 	  = !bEquipWeapon;
 
 	// Play montage to trigger attach weapon
-	PlayAnimMontage(Montages["Equipping"].LoadSynchronous(), 1.f);
+	PlayAnimMontage(Montages["Equipping"].LoadSynchronous());
 }
 
 void AOWCharacter::SetLockOn(AOWCharacter* Target)
@@ -170,6 +197,11 @@ void AOWCharacter::LockOn(float DeltaTime)
 	NewRotation.Roll  = CurrentRotation.Roll;
 
 	SetActorRotation(NewRotation);
+
+	// Lost Interest when the oponent is too far 
+	float Distance = (TargetCombat->GetActorLocation() - GetActorLocation()).Size();
+
+	if (Distance > CombatRadius) SetLockOn(nullptr);
 }
 
 void AOWCharacter::HitReaction(const FVector& ImpactPoint)
@@ -225,7 +257,7 @@ void AOWCharacter::Attack()
 	);
 }
 
-void AOWCharacter::OnWeaponHit(AOWCharacter* DamagingCharacter, const FVector& ImpactPoint)
+void AOWCharacter::OnWeaponHit(AOWCharacter* DamagingCharacter, const FVector& ImpactPoint, const float GivenDamage)
 {
 	if (!Montages.Contains("Hit React")) return;
 
@@ -236,8 +268,14 @@ void AOWCharacter::OnWeaponHit(AOWCharacter* DamagingCharacter, const FVector& I
 	ToggleMovement(true);
 	EnableWeapon(false);
 
-	// Show hit visualization
-	if (!bSucceedBlocking) UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, BloodSplash.LoadSynchronous(), ImpactPoint);
+	if (!bSucceedBlocking)
+	{
+		// Show hit visualization
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, BloodSplash.LoadSynchronous(), ImpactPoint);
+
+		// Reduce health
+		SetHealth(-GivenDamage);
+	}
 
 	// Sound (Blocking or hitflesh sound)
 	UGameplayStatics::PlaySoundAtLocation(

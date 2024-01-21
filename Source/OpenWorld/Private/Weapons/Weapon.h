@@ -26,6 +26,7 @@ public:
 	// ===== Interfaces ========== //
 
 	void EquipTo(AOWCharacter* NewOwner, FName SocketName);
+	void Drop();
 
 	// ===== Combat ========== //
 
@@ -60,6 +61,9 @@ protected:
 
 	UPROPERTY()
     TArray<AActor *> IgnoredActors;
+
+	UPROPERTY(EditAnywhere, Category=Combat)
+	float Damage = 20.f;
 
 	void ApplyDamage(FHitResult &TraceResult);
     void HitTrace(FHitResult &TraceResult);

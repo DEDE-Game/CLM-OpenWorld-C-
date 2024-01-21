@@ -25,7 +25,7 @@ public:
 
 	// ===== Combat ========== //
 
-	virtual void OnWeaponHit(AOWCharacter* DamagingCharacter, const FVector& ImpactPoint) override;
+	virtual void OnWeaponHit(AOWCharacter* DamagingCharacter, const FVector& ImpactPoint, const float GivenDamage) override;
 	virtual const bool IsEnemy(AOWCharacter* Other) const override;
 	virtual const bool IsBlocking() const override
 	{
@@ -63,6 +63,22 @@ protected:
 	UFUNCTION(BlueprintCallable)
 	void MoveForward();
 
+	// ===== Attributes ========== //
+
+	UPROPERTY(EditAnywhere, Category=Attributes)
+	float MaxHealth = 100.f;
+
+	float Health = MaxHealth;
+
+	FORCEINLINE void SetHealth(float Offset)
+	{
+		Health = FMath::Clamp(Health + Offset, 0.f, MaxHealth);
+
+		if (IsDead()) Die();
+	}
+
+	virtual void Die();
+
 	// ===== Combat ========== //
 
 	UPROPERTY(EditDefaultsOnly, Category=Combat)
@@ -82,6 +98,8 @@ protected:
 
 	/** Combo timer, when its over so do the combo */
 	FTimerHandle ComboOverHandler;
+
+	UPROPERTY(EditAnywhere, Category=Combat)
 	float ComboOverTimer = 2.f;
 
 	FORCEINLINE void ComboOver();
@@ -98,6 +116,10 @@ protected:
 
 	/** About to change the weapon */
 	void SwapWeapon(float Value);
+
+	/** If the oponent is farer than CombatRadius, it will not lock on that opponent anymore */
+	UPROPERTY(EditAnywhere, Category=Combat)
+	float CombatRadius = 1500.f;
 
 	/**
 	 * So it will always facing the target
@@ -151,9 +173,12 @@ public:
 	{
 		return bEquipWeapon;
 	}
+	FORCEINLINE const bool IsDead() const
+	{
+		return Health == 0.f;
+	}
 	FORCEINLINE ETeam GetTeam() const 
 	{
 		return Team;
 	}
-
 };

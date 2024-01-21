@@ -75,7 +75,10 @@ void AWeapon::ApplyDamage(FHitResult &TraceResult)
 	if (!ActorHit || !ActorHit->IsEnemy(CharacterOwner.Get())) return;
 	
 	// Apply damage
-	ActorHit->OnWeaponHit(CharacterOwner.Get(), TraceResult.ImpactPoint);
+	float RandomOffset = FMath::RandRange(1.f, 5.f); 
+	float GivenDamage  = FMath::RandRange(Damage - RandomOffset, Damage + RandomOffset);
+
+	ActorHit->OnWeaponHit(CharacterOwner.Get(), TraceResult.ImpactPoint, GivenDamage);
 
 	// Spawn blood trail only when oponent is not blocking the attack
 	if (!ActorHit->IsBlocking())
@@ -92,6 +95,7 @@ void AWeapon::ApplyDamage(FHitResult &TraceResult)
 		BloodTrailComponent->SetVariableObject(TEXT("User.ObjCollisionCallback"), this);
 	}
 }
+
 void AWeapon::HitTrace(FHitResult& TraceResult)
 {
     FVector Offset = CollisionBox->GetUpVector() * CollisionBox->GetScaledBoxExtent().Z;
@@ -127,6 +131,15 @@ void AWeapon::EquipTo(AOWCharacter* NewOwner, FName SocketName)
 
 	SetOwner(NewOwner);
 	AttachToComponent(NewOwner->GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, SocketName);
+}
+
+void AWeapon::Drop()
+{
+	DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+
+	BaseMesh->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
+	BaseMesh->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Block);
+	BaseMesh->SetSimulatePhysics(true);
 }
 
 // ==================== Combat ==================== //

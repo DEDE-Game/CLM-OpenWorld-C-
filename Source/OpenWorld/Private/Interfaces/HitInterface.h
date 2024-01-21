@@ -30,5 +30,5 @@ public:
 	/** Check is the character on blocking state */
 	FORCEINLINE virtual const bool IsBlocking() const = 0;
 	
-	virtual void OnWeaponHit(AOWCharacter* DamagingCharacter, const FVector& HitImpact) = 0;
+	virtual void OnWeaponHit(AOWCharacter* DamagingCharacter, const FVector& HitImpact, const float GivenDamage) = 0;
 };
