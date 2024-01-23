@@ -67,6 +67,34 @@ void AWeapon::OnWeaponOverlap(UPrimitiveComponent* OverlappedComponent, AActor* 
     ApplyDamage(TraceResult);
 }
 
+// ==================== Interfaces ==================== //
+
+void AWeapon::EquipTo(AOWCharacter* NewOwner, FName SocketName)
+{
+	CharacterOwner = NewOwner;
+
+	SetOwner(NewOwner);
+	AttachToComponent(NewOwner->GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, SocketName);
+}
+
+void AWeapon::Drop()
+{
+	DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+
+	BaseMesh->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
+	BaseMesh->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Block);
+	BaseMesh->SetSimulatePhysics(true);
+
+	// For the sake of performance, disable physics
+	FTimerHandle DisableDelay;
+	GetWorldTimerManager().SetTimer(DisableDelay, [this]() {
+		BaseMesh->SetSimulatePhysics(false);
+		BaseMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	}, 9.f, false);
+}
+
+// ==================== Combat ==================== //
+
 void AWeapon::ApplyDamage(FHitResult &TraceResult)
 {
 	IHitInterface* ActorHit = Cast<IHitInterface>(TraceResult.GetActor());
@@ -123,27 +151,6 @@ void AWeapon::HitTrace(FHitResult& TraceResult)
 		IgnoredActors.AddUnique(TraceResult.GetActor());
 }
 
-// ==================== Interfaces ==================== //
-
-void AWeapon::EquipTo(AOWCharacter* NewOwner, FName SocketName)
-{
-	CharacterOwner = NewOwner;
-
-	SetOwner(NewOwner);
-	AttachToComponent(NewOwner->GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, SocketName);
-}
-
-void AWeapon::Drop()
-{
-	DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
-
-	BaseMesh->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
-	BaseMesh->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Block);
-	BaseMesh->SetSimulatePhysics(true);
-}
-
-// ==================== Combat ==================== //
-
 void AWeapon::EnableCollision(bool bEnabled)
 {
 	CollisionBox->SetCollisionEnabled(bEnabled ? ECollisionEnabled::QueryOnly : ECollisionEnabled::NoCollision);
@@ -153,6 +160,17 @@ void AWeapon::EnableCollision(bool bEnabled)
 	{
 		IgnoredActors.Empty();
 	}
+}
+
+void AWeapon::SetTempDamage(float TempDamage)
+{
+	// Update it now
+	Damage = TempDamage;
+
+	// Set the timer
+	GetWorldTimerManager().SetTimer(TempDamageDelayHandler, [&]() {
+		Damage = DefaultDamage;
+	}, 5.f, false);
 }
 
 void AWeapon::ReceiveParticleData_Implementation(const TArray<FBasicParticleData>& Data, UNiagaraSystem* NiagaraSystem, const FVector& SimulationPositionOffset)

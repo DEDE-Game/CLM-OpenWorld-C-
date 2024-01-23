@@ -25,6 +25,8 @@ public:
 
 	// ===== Combat ========== //
 
+	/** Used to deactivate any action such as takedown stealth */
+	virtual void DeactivateAction() {}
 	virtual void OnWeaponHit(AOWCharacter* DamagingCharacter, const FVector& ImpactPoint, const float GivenDamage) override;
 	virtual const bool IsEnemy(AOWCharacter* Other) const override;
 	virtual const bool IsBlocking() const override
@@ -134,6 +136,8 @@ protected:
 
 	/** Just attack */
 	virtual void Attack();
+	
+	virtual void OnLostInterest() {};
 
     // ===== Animations ========== //
 

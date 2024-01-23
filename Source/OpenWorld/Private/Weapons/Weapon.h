@@ -31,6 +31,7 @@ public:
 	// ===== Combat ========== //
 
 	void EnableCollision(bool bEnabled);
+	void SetTempDamage(float TempDamage);
 	virtual void ReceiveParticleData_Implementation(const TArray<FBasicParticleData>& Data, UNiagaraSystem* NiagaraSystem, const FVector& SimulationPositionOffset) override;
 
 protected:
@@ -65,6 +66,11 @@ protected:
 	UPROPERTY(EditAnywhere, Category=Combat)
 	float Damage = 20.f;
 
+	float DefaultDamage = Damage;
+
+	/** After certain time, set back the damage to default one */
+	FTimerHandle TempDamageDelayHandler;
+
 	void ApplyDamage(FHitResult &TraceResult);
     void HitTrace(FHitResult &TraceResult);
 
@@ -75,6 +81,14 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category=VFX)
 	TSoftObjectPtr<UMaterialInterface> BloodSplatter;
+
+public:
+	// ===== Combat ========== //
+
+	FORCEINLINE const float GetDamage() const
+	{
+		return Damage;
+	}
 
 private:
 	void DefaultInitializer();

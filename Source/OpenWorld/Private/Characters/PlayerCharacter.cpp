@@ -2,9 +2,12 @@
 
 #include "Characters/PlayerCharacter.h"
 #include "Camera/CameraComponent.h"
+#include "Components/BoxComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "GameFrameworks/OWPlayerController.h"
+#include "GameFrameworks/OWHUD.h"
 #include "EnhancedInputComponent.h"
 #include "Materials/MaterialParameterCollectionInstance.h"
 #include "Materials/MaterialParameterCollection.h"
@@ -24,6 +27,11 @@ APlayerCharacter::APlayerCharacter()
 	// Camera
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	Camera->SetupAttachment(SpringArm);
+
+	// Takedown area
+	TakedownArea = CreateDefaultSubobject<UBoxComponent>(TEXT("Takedown Area"));
+	TakedownArea->SetupAttachment(RootComponent);
+	TakedownArea->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 
 	// ...
 	Team = ETeam::T_Friend;
@@ -106,9 +114,24 @@ void APlayerCharacter::BeginPlay()
 	CurrentLocation.Z -= GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
 	LastLocation1 = LastLocation2 = CurrentLocation;
 
+	// Events
+	TakedownArea->OnComponentBeginOverlap.AddDynamic(this, &ThisClass::OnEnterTakedown);
+	TakedownArea->OnComponentEndOverlap  .AddDynamic(this, &ThisClass::OnLeaveTakedown);
+
 	// !TESTING!
 	CarriedWeapon = GetWorld()->SpawnActor<AWeapon>(GivenWeapon);
 	CarriedWeapon->EquipTo(this, TEXT("Back Socket"));
+}
+
+void APlayerCharacter::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+
+	// Get the reference
+	OWPlayerController = Cast<AOWPlayerController>(NewController);
+
+	if (OWPlayerController.IsValid())
+		OWHUD = Cast<AOWHUD>(OWPlayerController->GetHUD());
 }
 
 void APlayerCharacter::SetupPlayerInputComponent(UInputComponent *PlayerInputComponent)
@@ -135,7 +158,8 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent *PlayerInputCom
 
 		EnhancedInput->BindAction(SwapWeaponAction.LoadSynchronous(), ETriggerEvent::Triggered, this, &ThisClass::ChangeWeapon);
 
-		EnhancedInput->BindAction(AttackAction.LoadSynchronous(), ETriggerEvent::Triggered, this, &ThisClass::Attack);
+		EnhancedInput->BindAction(AttackAction.LoadSynchronous(), ETriggerEvent::Triggered, this, &ThisClass::ChargeAttack);
+		EnhancedInput->BindAction(AttackAction.LoadSynchronous(), ETriggerEvent::Completed, this, &ThisClass::Attack);
 
 		EnhancedInput->BindAction(BlockAction.LoadSynchronous(), ETriggerEvent::Started, this, &ThisClass::Block);
 		EnhancedInput->BindAction(BlockAction.LoadSynchronous(), ETriggerEvent::Completed, this, &ThisClass::Block);
@@ -287,16 +311,107 @@ void APlayerCharacter::LockNearest()
 	}
 
 	if (AOWCharacter* Other = Cast<AOWCharacter>(TraceResult.GetActor()); Other && IsEnemy(Other))
+	{
+		DeactivateAction();
 		SetLockOn(Other);
+	}
 	else
 		SetLockOn(nullptr);
 }
 
+void APlayerCharacter::ChargeAttack()
+{
+	if (!bEquipWeapon) return;
+
+	DamageMultiplier += DamageMultiplierRate * GetWorld()->GetDeltaSeconds();
+
+	// Start timer for the first time
+	if (!GetWorldTimerManager().IsTimerActive(ChargeTimer) && !bCharging)
+		 GetWorldTimerManager().SetTimer(ChargeTimer, this, &ThisClass::DoChargeAttack, ChargeAfter);
+}
+
+void APlayerCharacter::DoChargeAttack()
+{
+	if (!Montages.Contains("Charge Attack")) return;
+
+	LockNearest();
+	PlayAnimMontage(Montages["Charge Attack"].LoadSynchronous());
+
+	bCharging = true;
+}
+
 void APlayerCharacter::Attack()
 {
-	LockNearest();
+	if (!CarriedWeapon.IsValid()) return;
 
-	Super::Attack();
+	// Takedown
+	if (TargetTakedown.IsValid())
+		PerformTakedown();
+	// Charge Attack
+	else if (bCharging)
+	{
+		bCanMove = false;
+		GetCharacterMovement()->StopMovementImmediately();
+
+		CarriedWeapon->SetTempDamage(
+			CarriedWeapon->GetDamage() * DamageMultiplier
+		);
+
+		PlayAnimMontage(Montages["Attacking"].LoadSynchronous(), 1.f, TEXT("ChargeAttack"));
+	}
+	// Ordinary attack
+	else 
+	{
+		LockNearest();
+
+		Super::Attack();
+	}
+
+	// Reset
+	DamageMultiplier = 1.f;
+	bCharging        = false;
+	GetWorldTimerManager().ClearTimer(ChargeTimer);
+}
+
+void APlayerCharacter::DeactivateAction()
+{
+	// Disabling takedown
+	TakedownArea->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+}
+
+void APlayerCharacter::OnLostInterest()
+{
+	// Re-enable the takedown
+	TakedownArea->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+}
+
+// ==================== Takedown ==================== //
+
+void APlayerCharacter::OnEnterTakedown(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	AOWCharacter* Other = Cast<AOWCharacter>(OtherActor);
+
+	if (Other && IsEnemy(Other) && OWHUD.IsValid())
+	{
+		TargetTakedown = Other;
+		OWHUD->ShowTip(TEXT("[LMB] - Perform Takedown"));
+	}
+}
+
+void APlayerCharacter::OnLeaveTakedown(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+{
+	TargetTakedown = nullptr;
+	
+	if (OWHUD.IsValid()) OWHUD->HideTip();
+}
+
+void APlayerCharacter::PerformTakedown()
+{
+	LockNearest();
+	PlayAnimMontage(Montages["Takedown"].LoadSynchronous());
+
+	// Insta kill
+	CarriedWeapon->SetTempDamage(1000.f);
 }
 
 // ==================== Environments ==================== //

@@ -16,7 +16,8 @@ public class OpenWorld : ModuleRules
 			"InputCore",
 			"EnhancedInput",
 			"NavigationSystem",
-			"Niagara"
+			"Niagara",
+			"UMG"
 		});
 
 		// PrivateDependencyModuleNames.AddRange(new string[] {  });

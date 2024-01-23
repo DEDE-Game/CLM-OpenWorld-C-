@@ -2,10 +2,12 @@
 
 #include "Characters/EnemyCharacter.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/WidgetComponent.h"
 #include "GameFrameworks/EnemyController.h"
 #include "NavigationInvokerComponent.h"
 #include "Perception/AIPerceptionComponent.h"
 #include "Weapons/Weapon.h"
+#include "Widgets/HealthBar.h"
 
 AEnemyCharacter::AEnemyCharacter()
 {
@@ -17,6 +19,12 @@ AEnemyCharacter::AEnemyCharacter()
     // Collision
     GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Camera, ECollisionResponse::ECR_Ignore);
     GetMesh()            ->SetCollisionResponseToChannel(ECollisionChannel::ECC_Camera, ECollisionResponse::ECR_Ignore);
+
+    // Health Bar
+    HealthBarComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("Health Bar"));
+    HealthBarComponent->SetupAttachment(RootComponent);
+    HealthBarComponent->SetWidgetSpace(EWidgetSpace::Screen);
+    HealthBarComponent->SetDrawAtDesiredSize(true);
 
     // Nav Invoker
     NavInvoker = CreateDefaultSubobject<UNavigationInvokerComponent>(TEXT("Navigation Invoker"));
@@ -33,6 +41,11 @@ void AEnemyCharacter::DefaultInitializer()
     );
 
     AIControllerClass = EnemyControllerAsset.Class;
+
+    static ConstructorHelpers::FClassFinder<UUserWidget> HealthBarAsset(
+        TEXT("/Game/Game/Blueprints/Widgets/Enemy/WBP_HealthBar")
+    );
+    HealthBarComponent->SetWidgetClass(HealthBarAsset.Class);
 }
 
 // ==================== Lifecycles ==================== //
@@ -44,6 +57,10 @@ void AEnemyCharacter::BeginPlay()
     // Give weapon
     CarriedWeapon = GetWorld()->SpawnActor<AWeapon>(GivenWeapon);
     CarriedWeapon->EquipTo(this, TEXT("Back Socket"));
+
+    // Initializing UI
+    HealthBar = Cast<UHealthBar>(HealthBarComponent->GetUserWidgetObject());
+    HealthBar->UpdateHealth(Health / MaxHealth);
 }
 
 void AEnemyCharacter::PossessedBy(AController* NewController)
@@ -66,20 +83,30 @@ void AEnemyCharacter::OnWeaponHit(AOWCharacter* DamagingCharacter, const FVector
 {
     Super::OnWeaponHit(DamagingCharacter, HitImpact, GivenDamage);
 
+    // Make the enemy lock to that damaging actor with delay to give a time for hit reaction
     if (!TargetCombat.IsValid())
     {
         TargetCombat = DamagingCharacter;
 
-        // Make the enemy lock to that damaging actor with delay to give a time for hit reaction
-        EnemyController->ActivateReaction();
+        // Only delay reaction if the damage is not insta
+        if (GivenDamage < Health) EnemyController->ActivateReaction();
     }
+
+    // Update UI
+    HealthBar->UpdateHealth(Health / MaxHealth);
 }
 
 void AEnemyCharacter::SetLockOn(AOWCharacter* Target)
 {
-    if (!Target) return;
-
     Super::SetLockOn(Target);
 
+    if (!Target) return;
     EnemyController->MoveToLocation(Target->GetActorLocation(), 200.f, false);
+}
+
+void AEnemyCharacter::Die()
+{
+    Super::Die();
+
+    HealthBarComponent->SetVisibility(false);
 }

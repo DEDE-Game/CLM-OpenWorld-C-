@@ -8,7 +8,9 @@
 
 class AEnemyController;
 class AWeapon;
+class UHealthBar;
 class UNavigationInvokerComponent;
+class UWidgetComponent;
 
 UCLASS()
 class AEnemyCharacter : public AOWCharacter
@@ -42,6 +44,9 @@ protected:
 	// ===== Components ========== //
 
 	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<UWidgetComponent> HealthBarComponent;
+
+	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UNavigationInvokerComponent> NavInvoker;	
 
 	// ===== Combat ========== //
@@ -50,6 +55,13 @@ protected:
 	TSubclassOf<AWeapon> GivenWeapon;
 
 	virtual void SetLockOn(AOWCharacter* Target) override;
+	virtual void Die() override;
+
+	// ===== UI ========== //
+
+	/** The actual health bar */
+	UPROPERTY()
+	TWeakObjectPtr<UHealthBar> HealthBar;
 
 private:
 	void DefaultInitializer();

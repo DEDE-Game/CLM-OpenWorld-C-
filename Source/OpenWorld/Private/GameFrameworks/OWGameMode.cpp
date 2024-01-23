@@ -1,6 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "OWGameMode.h"
+#include "OWHUD.h"
 
 AOWGameMode::AOWGameMode()
 {
@@ -23,4 +24,11 @@ void AOWGameMode::DefaultInitializer()
         TEXT("/Script/OpenWorld.OWPlayerController")
     );
     PlayerControllerClass = Controller.Class;
+
+    // HUD
+    static ConstructorHelpers::FClassFinder<AHUD> HUD(
+        TEXT("/Script/OpenWorld.OWHUD")
+    );
+
+    HUDClass = HUD.Class;
 }

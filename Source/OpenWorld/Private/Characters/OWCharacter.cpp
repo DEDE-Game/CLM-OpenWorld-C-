@@ -201,7 +201,11 @@ void AOWCharacter::LockOn(float DeltaTime)
 	// Lost Interest when the oponent is too far 
 	float Distance = (TargetCombat->GetActorLocation() - GetActorLocation()).Size();
 
-	if (Distance > CombatRadius) SetLockOn(nullptr);
+	if (Distance > CombatRadius || TargetCombat->IsDead())
+	{
+		OnLostInterest();
+		SetLockOn(nullptr);
+	}
 }
 
 void AOWCharacter::HitReaction(const FVector& ImpactPoint)
@@ -248,7 +252,7 @@ void AOWCharacter::Attack()
 	PlayAnimMontage(Montage, 1.f, AttackCombo);
 
 	// Updating combo, don't forget to update the combo over too
-	AttackCount = (AttackCount + 1) % 3;
+	AttackCount = (AttackCount + 1) % 2;
 	GetWorldTimerManager().SetTimer(
 		ComboOverHandler,
 		this,

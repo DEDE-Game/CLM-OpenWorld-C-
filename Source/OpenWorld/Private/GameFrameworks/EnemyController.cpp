@@ -95,6 +95,7 @@ void AEnemyController::OnTargetSense(AActor* Actor, FAIStimulus Stimulus)
     
     if (!EnemyCharacter->bEquipWeapon) EnemyCharacter->SwapWeapon(1);
 
+    Other         ->DeactivateAction();
     EnemyCharacter->SetLockOn(Other);
 }
 

@@ -6,6 +6,9 @@
 #include "Characters/OWCharacter.h"
 #include "PlayerCharacter.generated.h"
 
+class AOWPlayerController;
+class AOWHUD;
+class UBoxComponent;
 class UCameraComponent;
 class USpringArmComponent;
 class UInputAction;
@@ -22,14 +25,23 @@ public:
 
 	// ===== Lifecycles ========== //
 
+	virtual void PossessedBy(AController* NewController) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent *PlayerInputComponent) override;
 	virtual void Tick(float DeltaTime) override;
+
+	// ===== Combat ========== //
+
+	virtual void DeactivateAction() override;
 
 protected:
 
 	// ===== Lifecycles ========== //
 
 	virtual void BeginPlay() override;
+
+	// ===== Combat ========== //
+
+	virtual void OnLostInterest() override;
 
 private:
 	void DefaultInitializer();
@@ -43,6 +55,9 @@ private:
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UCameraComponent> Camera;
 
+	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<UBoxComponent> TakedownArea;
+
 	// ===== References ========== //
 
 	UPROPERTY(EditAnywhere, Category=Materials)
@@ -50,6 +65,12 @@ private:
 
 	UPROPERTY()
 	TWeakObjectPtr<UMaterialParameterCollectionInstance> GlobalMatParamIns;
+
+	UPROPERTY()
+	TWeakObjectPtr<AOWPlayerController> OWPlayerController;
+
+	UPROPERTY()
+	TWeakObjectPtr<AOWHUD> OWHUD;
 
 	// ===== Input ========== //
 
@@ -111,6 +132,35 @@ private:
 	void LockNearest();
 
 	virtual void Attack() override;
+
+	/**== CHARGING ATTACK ==**/
+
+	UPROPERTY(EditAnywhere, Category=Combat)
+	float DamageMultiplierRate = .8f;
+
+	float DamageMultiplier = 1.f;
+
+	/** Once the time is passed, will use charge attack instead */
+	FTimerHandle ChargeTimer;
+	float ChargeAfter = .6f;
+
+	bool bCharging = false;
+
+	void ChargeAttack();
+	void DoChargeAttack();
+
+	// ===== Takedown ========== //
+
+	UPROPERTY()
+	TWeakObjectPtr<AOWCharacter> TargetTakedown;
+
+	UFUNCTION()
+	void OnEnterTakedown(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+	UFUNCTION()
+	void OnLeaveTakedown(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+
+	void PerformTakedown();
 	
 	// ===== Environments ========== //
 
