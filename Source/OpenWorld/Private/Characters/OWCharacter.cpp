@@ -2,12 +2,11 @@
 
 #include "Characters/OWCharacter.h"
 #include "Components/CapsuleComponent.h"
-#include "Enums/CollisionChannel.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "NiagaraFunctionLibrary.h"
-#include "Weapons/Weapon.h"
+#include "Weapons/MeleeWeapon.h"
 
 AOWCharacter::AOWCharacter()
 {
@@ -25,7 +24,6 @@ AOWCharacter::AOWCharacter()
 	/* General */
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 	GetCharacterMovement()->MaxAcceleration = 500.f;
-
 	/* Walking */
 	GetCharacterMovement()->GroundFriction = 1.f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 100.f;
@@ -158,13 +156,10 @@ void AOWCharacter::EnableWeapon(bool bEnabled)
 
 void AOWCharacter::AttachWeapon()
 {
-	bEquipWeapon 	  = !bEquipWeapon;
-	FName SocketName  = bEquipWeapon ? TEXT("Hand Socket") : TEXT("Back Socket");
-
-	CarriedWeapon->EquipTo(this, SocketName);
+	CarriedWeapon->EquipTo(bEquipWeapon);
 }
 
-void AOWCharacter::SwapWeapon(float Value)
+void AOWCharacter::SwapWeapon()
 {
 	if (!CarriedWeapon.IsValid() || !Montages.Contains("Equipping")) return;
 

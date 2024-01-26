@@ -76,7 +76,7 @@ void AEnemyController::OnMoveCompleted(FAIRequestID RequestID, const FPathFollow
 
 void AEnemyController::ActivateReaction()
 {
-   if (!EnemyCharacter->bEquipWeapon) EnemyCharacter->SwapWeapon(1);
+   if (!EnemyCharacter->bEquipWeapon) EnemyCharacter->SwapWeapon();
 
     GetWorldTimerManager().SetTimer(
         ReactionDelay,
@@ -93,7 +93,7 @@ void AEnemyController::OnTargetSense(AActor* Actor, FAIStimulus Stimulus)
     // If already have target...
     if (!Other || !EnemyCharacter->IsEnemy(Other) || GetWorldTimerManager().IsTimerActive(ReactionDelay)) return;
     
-    if (!EnemyCharacter->bEquipWeapon) EnemyCharacter->SwapWeapon(1);
+    if (!EnemyCharacter->bEquipWeapon) EnemyCharacter->SwapWeapon();
 
     Other         ->DeactivateAction();
     EnemyCharacter->SetLockOn(Other);

@@ -5,8 +5,7 @@
 #include "Components/WidgetComponent.h"
 #include "GameFrameworks/EnemyController.h"
 #include "NavigationInvokerComponent.h"
-#include "Perception/AIPerceptionComponent.h"
-#include "Weapons/Weapon.h"
+#include "Weapons/MeleeWeapon.h"
 #include "Widgets/HealthBar.h"
 
 AEnemyCharacter::AEnemyCharacter()
@@ -25,6 +24,7 @@ AEnemyCharacter::AEnemyCharacter()
     HealthBarComponent->SetupAttachment(RootComponent);
     HealthBarComponent->SetWidgetSpace(EWidgetSpace::Screen);
     HealthBarComponent->SetDrawAtDesiredSize(true);
+    HealthBarComponent->SetVisibility(true);
 
     // Nav Invoker
     NavInvoker = CreateDefaultSubobject<UNavigationInvokerComponent>(TEXT("Navigation Invoker"));
@@ -55,8 +55,8 @@ void AEnemyCharacter::BeginPlay()
     Super::BeginPlay();
 
     // Give weapon
-    CarriedWeapon = GetWorld()->SpawnActor<AWeapon>(GivenWeapon);
-    CarriedWeapon->EquipTo(this, TEXT("Back Socket"));
+    CarriedWeapon = GetWorld()->SpawnActor<AMeleeWeapon>(GivenWeapon);
+    CarriedWeapon->Pickup(this, TEXT("Back0 Socket"));
 
     // Initializing UI
     HealthBar = Cast<UHealthBar>(HealthBarComponent->GetUserWidgetObject());
@@ -94,6 +94,13 @@ void AEnemyCharacter::OnWeaponHit(AOWCharacter* DamagingCharacter, const FVector
 
     // Update UI
     HealthBar->UpdateHealth(Health / MaxHealth);
+}
+
+void AEnemyCharacter::SwapWeapon()
+{
+    Super::SwapWeapon();
+
+    bEquipWeapon = !bEquipWeapon;
 }
 
 void AEnemyCharacter::SetLockOn(AOWCharacter* Target)

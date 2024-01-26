@@ -4,6 +4,7 @@
 #include "Camera/CameraComponent.h"
 #include "Components/BoxComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/InventoryComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFrameworks/OWPlayerController.h"
@@ -11,9 +12,7 @@
 #include "EnhancedInputComponent.h"
 #include "Materials/MaterialParameterCollectionInstance.h"
 #include "Materials/MaterialParameterCollection.h"
-#include "Kismet/GameplayStatics.h"
-#include "Kismet/KismetSystemLibrary.h"
-#include "Weapons/Weapon.h"
+#include "Weapons/MeleeWeapon.h"
 
 APlayerCharacter::APlayerCharacter()
 {
@@ -32,6 +31,9 @@ APlayerCharacter::APlayerCharacter()
 	TakedownArea = CreateDefaultSubobject<UBoxComponent>(TEXT("Takedown Area"));
 	TakedownArea->SetupAttachment(RootComponent);
 	TakedownArea->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+
+	// Inventory
+	Inventory = CreateDefaultSubobject<UInventoryComponent>(TEXT("Inventory"));
 
 	// ...
 	Team = ETeam::T_Friend;
@@ -90,6 +92,11 @@ void APlayerCharacter::DefaultInitializer()
 	);
 	DodgeAction = DodgeActionAsset.Object;
 
+	static ConstructorHelpers::FObjectFinder<UInputAction> InteractActionAsset(
+		TEXT("/Script/EnhancedInput.InputAction'/Game/Game/Inputs/IA_Interact.IA_Interact'")
+	);
+	InteractAction = InteractActionAsset.Object;
+
 	static ConstructorHelpers::FObjectFinder<UMaterialParameterCollection> GlobalParamAsset(
 		TEXT("/Script/Engine.MaterialParameterCollection'/Game/Game/Materials/MP_Global.MP_Global'")
 	);
@@ -102,6 +109,11 @@ void APlayerCharacter::ReferencesInitializer()
 }
 
 // ==================== Lifecycles ==================== //
+
+void APlayerCharacter::OnConstruction(const FTransform& Transform)
+{
+	if (Inventory) Inventory->RefreshSlot();
+}
 
 void APlayerCharacter::BeginPlay()
 {
@@ -117,10 +129,6 @@ void APlayerCharacter::BeginPlay()
 	// Events
 	TakedownArea->OnComponentBeginOverlap.AddDynamic(this, &ThisClass::OnEnterTakedown);
 	TakedownArea->OnComponentEndOverlap  .AddDynamic(this, &ThisClass::OnLeaveTakedown);
-
-	// !TESTING!
-	CarriedWeapon = GetWorld()->SpawnActor<AWeapon>(GivenWeapon);
-	CarriedWeapon->EquipTo(this, TEXT("Back Socket"));
 }
 
 void APlayerCharacter::PossessedBy(AController* NewController)
@@ -165,6 +173,8 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent *PlayerInputCom
 		EnhancedInput->BindAction(BlockAction.LoadSynchronous(), ETriggerEvent::Completed, this, &ThisClass::Block);
 
 		EnhancedInput->BindAction(DodgeAction.LoadSynchronous(), ETriggerEvent::Triggered, this, &ThisClass::Dodge);
+
+		EnhancedInput->BindAction(InteractAction.LoadSynchronous(), ETriggerEvent::Triggered, this, &ThisClass::Interact);
 	}
 }
 
@@ -258,9 +268,12 @@ void APlayerCharacter::Block(const FInputActionValue& InputValue)
 
 void APlayerCharacter::ChangeWeapon(const FInputActionValue& InputValue)
 {
+	if (GetCurrentMontage()) return;
+
 	float Value = InputValue.Get<float>();
 
-	SwapWeapon(Value);
+	Inventory->ChangeWeapon(Value - 1);
+	SwapWeapon();
 }
 
 void APlayerCharacter::Dodge()
@@ -286,21 +299,21 @@ void APlayerCharacter::LockNearest()
 	FVector    TraceLocation = GetActorLocation();
 	FHitResult TraceResult;
 
-	// Only trace for pawn
-	TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
-	ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_Pawn));
+	FCollisionObjectQueryParams ObjectParams;
+	ObjectParams.AddObjectTypesToQuery(ECollisionChannel::ECC_Pawn);
 
-	UKismetSystemLibrary::SphereTraceSingleForObjects(
-		this,
-		TraceLocation,
-		TraceLocation,
-		500.f,
-		ObjectTypes,
-		false,
-		TArray<AActor*>(),
-		EDrawDebugTrace::None,
-		TraceResult,
-		true
+	FCollisionQueryParams QueryParams;
+	QueryParams.bTraceComplex = false;
+	QueryParams.AddIgnoredActor(this);
+
+	GetWorld()->SweepSingleByObjectType(
+		TraceResult, 
+		TraceLocation, 
+		TraceLocation, 
+		FQuat::Identity,
+		ObjectParams,
+		FCollisionShape::MakeSphere(250.f),
+		QueryParams
 	);
 
 	if (!TraceResult.bBlockingHit)
@@ -394,15 +407,15 @@ void APlayerCharacter::OnEnterTakedown(UPrimitiveComponent* OverlappedComponent,
 	if (Other && IsEnemy(Other) && OWHUD.IsValid())
 	{
 		TargetTakedown = Other;
-		OWHUD->ShowTip(TEXT("[LMB] - Perform Takedown"));
+		ShowTip(TEXT("[LMB] - Perform Takedown"));
 	}
 }
 
 void APlayerCharacter::OnLeaveTakedown(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
 	TargetTakedown = nullptr;
-	
-	if (OWHUD.IsValid()) OWHUD->HideTip();
+
+	if (OWHUD.IsValid()) HideTip();
 }
 
 void APlayerCharacter::PerformTakedown()
@@ -427,4 +440,25 @@ void APlayerCharacter::AffectsFoliage()
 	GlobalMatParamIns->SetVectorParameterValue(TEXT("Player Current Location"), CurrentLocation);
 	GlobalMatParamIns->SetVectorParameterValue(TEXT("Player Last Location"), LastLocation1);
 	GlobalMatParamIns->SetVectorParameterValue(TEXT("Player Last Location2"), LastLocation2);
+}
+
+void APlayerCharacter::Interact()
+{
+	if (!OverlappingWeapon.IsValid()) return;
+
+	Inventory->AddWeapon(OverlappingWeapon.Get());
+}
+
+// ==================== UI ==================== //
+
+void APlayerCharacter::ShowTip(const FString& Text)
+{
+	if (OWHUD.IsValid())
+		OWHUD->ShowTip(Text);
+}
+
+void APlayerCharacter::HideTip()
+{
+	if (OWHUD.IsValid())
+		OWHUD->HideTip();
 }

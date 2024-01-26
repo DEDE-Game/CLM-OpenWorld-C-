@@ -8,7 +8,7 @@
 #include "Interfaces/HitInterface.h"
 #include "OWCharacter.generated.h"
 
-class AWeapon;
+class AMeleeWeapon;
 class UNiagaraSystem;
 
 UCLASS(Abstract)
@@ -19,27 +19,30 @@ class AOWCharacter : public ACharacter, public IHitInterface
 public:
 	AOWCharacter();
 
-	// ===== Lifecycles ========== //
+	// ***===== Lifecycles ==========*** //
 
 	virtual void Tick(float DeltaTime) override;
 
-	// ===== Combat ========== //
+	// ***===== Combat ==========*** //
 
-	/** Used to deactivate any action such as takedown stealth */
-	virtual void DeactivateAction() {}
-	virtual void OnWeaponHit(AOWCharacter* DamagingCharacter, const FVector& ImpactPoint, const float GivenDamage) override;
+	//~ Begin IHitInterface
 	virtual const bool IsEnemy(AOWCharacter* Other) const override;
 	virtual const bool IsBlocking() const override
 	{
 		return bSucceedBlocking;
 	}
+	virtual void OnWeaponHit(AOWCharacter* DamagingCharacter, const FVector& ImpactPoint, const float GivenDamage) override;
+	//~ End IHitInterface
+
+	/** Used to deactivate any action such as takedown stealth */
+	virtual void DeactivateAction() {}
 
 protected:
-	// ===== Lifecycles ========== //
+	// ***===== Lifecycles ==========*** //
 
 	virtual void BeginPlay() override;
 
-	// ===== Locomotions ========== //
+	// ***===== Locomotions ==========*** //
 
 	UPROPERTY(EditAnywhere, Category=Locomotions)
 	float SprintSpeed = 800.f;
@@ -65,7 +68,7 @@ protected:
 	UFUNCTION(BlueprintCallable)
 	void MoveForward();
 
-	// ===== Attributes ========== //
+	// ***===== Attributes ==========*** //
 
 	UPROPERTY(EditAnywhere, Category=Attributes)
 	float MaxHealth = 100.f;
@@ -81,13 +84,13 @@ protected:
 
 	virtual void Die();
 
-	// ===== Combat ========== //
+	// ***===== Combat ==========*** //
 
 	UPROPERTY(EditDefaultsOnly, Category=Combat)
 	ETeam Team = ETeam::T_Neutral;
 
 	UPROPERTY()
-	TWeakObjectPtr<AWeapon> CarriedWeapon;
+	TWeakObjectPtr<AMeleeWeapon> CarriedWeapon;
 
 	UPROPERTY()
 	TWeakObjectPtr<AOWCharacter> TargetCombat;
@@ -95,7 +98,7 @@ protected:
 	bool bEquipWeapon = false;
 	bool bSucceedBlocking = false;
 
-	/** Combo */
+	// *** Combo *** //
 	int8 AttackCount  = 0;
 
 	/** Combo timer, when its over so do the combo */
@@ -106,18 +109,22 @@ protected:
 
 	FORCEINLINE void ComboOver();
 
+	// *** Weapon & Blocking *** //
+
 	/** Blocking opponent's attack */
 	void ToggleBlock(bool bToggled);
 
 	UFUNCTION(BlueprintCallable)
 	void EnableWeapon(bool bEnabled);
 
-	/** Changing which weapon to equip */
+	/** Changing which weapon to equip by attaching to the character's back or hand */
 	UFUNCTION(BlueprintCallable)
 	void AttachWeapon();
 
 	/** About to change the weapon */
-	void SwapWeapon(float Value);
+	virtual void SwapWeapon();
+
+	// *** Attacking/Engaging *** //
 
 	/** If the oponent is farer than CombatRadius, it will not lock on that opponent anymore */
 	UPROPERTY(EditAnywhere, Category=Combat)
@@ -134,17 +141,17 @@ protected:
 
 	void HitReaction(const FVector& ImpactPoint);
 
-	/** Just attack */
 	virtual void Attack();
-	
+
+	/** Called when the target is out of combat radius */	
 	virtual void OnLostInterest() {};
 
-    // ===== Animations ========== //
+    // ***===== Animations ==========*** //
 
     UPROPERTY(EditDefaultsOnly, Category=Animations)
 	TMap<FName, TSoftObjectPtr<UAnimMontage>> Montages;
 
-	// ===== Audio ========== //
+	// ***===== Audio ==========*** //
 
 	UPROPERTY(EditDefaultsOnly, Category=Audio)
 	TMap<FName, TSoftObjectPtr<USoundBase>> FootstepSounds;
@@ -158,7 +165,7 @@ protected:
 	UFUNCTION(BlueprintCallable)
 	void PlayFootstepSound();
 
-	// ===== VFX ========== //
+	// ***===== VFX ==========*** //
 
 	UPROPERTY(EditDefaultsOnly, Category=VFX)
 	TSoftObjectPtr<UNiagaraSystem> BloodSplash;
@@ -167,7 +174,7 @@ private:
 	void DefaultInitializer();
 
 public:
-	// ===== Accessors ========== //
+	// ***===== Accessors ==========*** //
 
 	FORCEINLINE AOWCharacter* GetTargetCombat()
 	{

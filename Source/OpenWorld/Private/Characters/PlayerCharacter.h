@@ -8,12 +8,13 @@
 
 class AOWPlayerController;
 class AOWHUD;
+struct FInputActionValue;
+class UAnimMontage;
 class UBoxComponent;
 class UCameraComponent;
-class USpringArmComponent;
 class UInputAction;
-class UAnimMontage;
-struct FInputActionValue;
+class UInventoryComponent;
+class USpringArmComponent;
 
 UCLASS()
 class APlayerCharacter : public AOWCharacter
@@ -25,6 +26,9 @@ public:
 
 	// ===== Lifecycles ========== //
 
+#if WITH_EDITOR
+	virtual void OnConstruction(const FTransform& Transform) override;
+#endif
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent *PlayerInputComponent) override;
 	virtual void Tick(float DeltaTime) override;
@@ -32,6 +36,11 @@ public:
 	// ===== Combat ========== //
 
 	virtual void DeactivateAction() override;
+
+	// ===== UI ========== //
+
+	void ShowTip(const FString& Text);
+	void HideTip();
 
 protected:
 
@@ -57,6 +66,9 @@ private:
 
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UBoxComponent> TakedownArea;
+
+	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<UInventoryComponent> Inventory;
 
 	// ===== References ========== //
 
@@ -104,6 +116,9 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category=Input)
 	TSoftObjectPtr<UInputAction> DodgeAction;
 
+	UPROPERTY(EditDefaultsOnly, Category=Input)
+	TSoftObjectPtr<UInputAction> InteractAction;
+
 	// ===== Locomotions ========== //
 
 	FVector2D MovementInput;
@@ -119,9 +134,6 @@ private:
 	virtual void Landed(const FHitResult &Hit) override;
 
 	// ===== Combat ========== //
-
-	// !!THIS GIVEN WEAPON IS FOR TESTING ONLY!!
-	UPROPERTY(EditAnywhere) TSubclassOf<AWeapon> GivenWeapon;
 
 	FORCEINLINE void Block(const FInputActionValue& InputValue);
 	FORCEINLINE void ChangeWeapon(const FInputActionValue& InputValue);
@@ -164,10 +176,32 @@ private:
 	
 	// ===== Environments ========== //
 
+	/**=== Foliages ===**/
+
 	/** Delay foliage bending effect */
 	FVector LastLocation1;
 	FVector LastLocation2;
 
 	/** Make nearby character's foliage bending */
 	void AffectsFoliage();
+
+	/**=== Game Objects ===**/
+
+	UPROPERTY()
+	TWeakObjectPtr<AMeleeWeapon> OverlappingWeapon;
+
+	void Interact();
+
+public:
+	// ===== Modifiers ========== //
+
+	FORCEINLINE void SetOverlappingWeapon(TWeakObjectPtr<AMeleeWeapon> Weapon)
+	{
+		OverlappingWeapon = Weapon;
+	}
+	FORCEINLINE void SetCarriedWeapon(TWeakObjectPtr<AMeleeWeapon> Weapon)
+	{
+		CarriedWeapon = Weapon;
+		bEquipWeapon  = CarriedWeapon.IsValid();
+	}
 };

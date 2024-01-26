@@ -7,7 +7,7 @@
 #include "EnemyCharacter.generated.h"
 
 class AEnemyController;
-class AWeapon;
+class AMeleeWeapon;
 class UHealthBar;
 class UNavigationInvokerComponent;
 class UWidgetComponent;
@@ -29,6 +29,7 @@ public:
 
 	// ===== Combat ========== //
 
+	/*~ */
 	virtual void OnWeaponHit(AOWCharacter* DamagingCharacter, const FVector& HitImpact, const float GivenDamage) override;
 
 protected:
@@ -52,8 +53,9 @@ protected:
 	// ===== Combat ========== //
 
 	UPROPERTY(EditAnywhere, Category=Combat)
-	TSubclassOf<AWeapon> GivenWeapon;
+	TSubclassOf<AMeleeWeapon> GivenWeapon;
 
+	virtual void SwapWeapon() override;
 	virtual void SetLockOn(AOWCharacter* Target) override;
 	virtual void Die() override;
 
