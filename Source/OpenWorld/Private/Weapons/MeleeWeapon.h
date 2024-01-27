@@ -71,6 +71,10 @@ protected:
 
 	FName AttachedSocket;
 
+	/** This can be usefull for playing different attacking animation for character */
+	UPROPERTY(EditDefaultsOnly, Category=Attributes)
+	FName WeaponName;
+
 	// ===== Combat ========== //
 
 	UPROPERTY()
@@ -99,11 +103,15 @@ protected:
 	TSoftObjectPtr<UMaterialInterface> BloodSplatter;
 
 public:
-	// ===== Combat ========== //
+	// ===== Acessors ========== //
 
 	FORCEINLINE const float GetDamage() const
 	{
 		return Damage;
+	}
+	FORCEINLINE const FString GetWeaponName() const
+	{
+		return WeaponName.ToString();
 	}
 
 private:

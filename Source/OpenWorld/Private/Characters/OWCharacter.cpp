@@ -97,7 +97,14 @@ void AOWCharacter::ToggleCrouch(bool bToggled)
 
 void AOWCharacter::MoveForward()
 {
+	// Make sure to disable root motion first
+	GetMesh()->GetAnimInstance()->SetRootMotionMode(ERootMotionMode::IgnoreRootMotion);
 	GetCharacterMovement()->AddImpulse(GetActorForwardVector() * 400.f, true);
+
+	// Re-enable it after certain time
+	GetWorldTimerManager().SetTimer(RootMotionTimerHandler, [this]() {
+		GetMesh()->GetAnimInstance()->SetRootMotionMode(ERootMotionMode::RootMotionFromMontagesOnly);
+	}, .5f, false);
 }
 
 // ==================== Attributes ==================== //
@@ -243,13 +250,13 @@ void AOWCharacter::Attack()
 	bCanMove = false;
 	GetCharacterMovement()->StopMovementImmediately();
 
-	// Play montage
-	FName AttackCombo     = *FString::Printf(TEXT("%d"), AttackCount);
+	// Play montage depends on the carried weapon
+	FName AttackCombo     = *FString::Printf(TEXT("%s%d"), *CarriedWeapon->GetWeaponName(), AttackCount);
 	UAnimMontage* Montage = Montages["Attacking"].LoadSynchronous(); 
 	PlayAnimMontage(Montage, 1.f, AttackCombo);
 
 	// Updating combo, don't forget to update the combo over too
-	AttackCount = (AttackCount + 1) % 2;
+	AttackCount = (AttackCount + 1) % 3;
 	GetWorldTimerManager().SetTimer(
 		ComboOverHandler,
 		this,

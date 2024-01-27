@@ -370,7 +370,8 @@ void APlayerCharacter::Attack()
 			CarriedWeapon->GetDamage() * DamageMultiplier
 		);
 
-		PlayAnimMontage(Montages["Attacking"].LoadSynchronous(), 1.f, TEXT("ChargeAttack"));
+		FName ChargeAttackSection = *FString::Printf(TEXT("%sChargeAttack"), *CarriedWeapon->GetWeaponName());
+		PlayAnimMontage(Montages["Attacking"].LoadSynchronous(), 1.f, ChargeAttackSection);
 	}
 	// Ordinary attack
 	else 

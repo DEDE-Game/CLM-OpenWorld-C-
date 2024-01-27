@@ -68,6 +68,9 @@ protected:
 	UFUNCTION(BlueprintCallable)
 	void MoveForward();
 
+	/** Re-enabling root motion after certain time */
+	FTimerHandle RootMotionTimerHandler;
+
 	// ***===== Attributes ==========*** //
 
 	UPROPERTY(EditAnywhere, Category=Attributes)
