@@ -211,7 +211,7 @@ void AMeleeWeapon::SetTempDamage(float TempDamage)
 	// Set the timer
 	GetWorldTimerManager().SetTimer(TempDamageDelayHandler, [&]() {
 		Damage = DefaultDamage;
-	}, 5.f, false);
+	}, 1.f, false);
 }
 
 void AMeleeWeapon::ReceiveParticleData_Implementation(const TArray<FBasicParticleData>& Data, UNiagaraSystem* NiagaraSystem, const FVector& SimulationPositionOffset)

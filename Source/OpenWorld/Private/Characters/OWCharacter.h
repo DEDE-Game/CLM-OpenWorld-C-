@@ -111,6 +111,11 @@ protected:
 
 	// *** Weapon & Blocking *** //
 
+	/** Check are the character allowed to swap weapon
+	 * this can be dissalowed if the new equipped weapon is not valid
+	 */
+	bool bAllowSwapWeapon = true;
+
 	/** Blocking opponent's attack */
 	void ToggleBlock(bool bToggled);
 

@@ -199,9 +199,10 @@ public:
 	{
 		OverlappingWeapon = Weapon;
 	}
-	FORCEINLINE void SetCarriedWeapon(TWeakObjectPtr<AMeleeWeapon> Weapon)
+	FORCEINLINE void SetCarriedWeapon(TWeakObjectPtr<AMeleeWeapon> Weapon, bool bAllowedSwap = true)
 	{
 		CarriedWeapon = Weapon;
 		bEquipWeapon  = CarriedWeapon.IsValid();
+		bAllowSwapWeapon = bAllowedSwap;
 	}
 };

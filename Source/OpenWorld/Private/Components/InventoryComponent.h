@@ -46,9 +46,15 @@ private:
 	TArray<TWeakObjectPtr<AMeleeWeapon>> Weapons;
 
 	int8 CurrentWeapon = 0;
+	int8 LastWeapon    = CurrentWeapon;
 	
 	UPROPERTY(EditAnywhere, Category=Weaponary)
 	int8 WeaponMaxSlot = 5;
+
+	// *** Unequip Weapon *** //
+
+	FTimerHandle UnequipingTimerHandle;
+	FORCEINLINE void UnequipWeapon();
 
 	int8 FindEmptySlot();
 };

@@ -156,18 +156,20 @@ void AOWCharacter::EnableWeapon(bool bEnabled)
 
 void AOWCharacter::AttachWeapon()
 {
+	if (!CarriedWeapon.IsValid()) return;
+
 	CarriedWeapon->EquipTo(bEquipWeapon);
 }
 
 void AOWCharacter::SwapWeapon()
 {
-	if (!CarriedWeapon.IsValid() || !Montages.Contains("Equipping")) return;
+	if (!bAllowSwapWeapon || !Montages.Contains("Equipping")) return;
 
 	// Determine which section to play the montage
-	FName SectionName = bEquipWeapon ? TEXT("Unequip") : TEXT("Equip");
+	FName SectionName = bEquipWeapon ? TEXT("Equip") : TEXT("Unequip");
 
 	// Play montage to trigger attach weapon
-	PlayAnimMontage(Montages["Equipping"].LoadSynchronous());
+	PlayAnimMontage(Montages["Equipping"].LoadSynchronous(), 1.f, SectionName);
 }
 
 void AOWCharacter::SetLockOn(AOWCharacter* Target)

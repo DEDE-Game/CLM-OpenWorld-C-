@@ -38,15 +38,22 @@ void UInventoryComponent::AddWeapon(AMeleeWeapon* NewWeapon)
 
 void UInventoryComponent::ChangeWeapon(int8 Slot)
 {
-	int8 LastWeapon  = CurrentWeapon;
-	CurrentWeapon    = Slot;
+	LastWeapon    = CurrentWeapon;
+	CurrentWeapon = Slot;
 
 	// When the player is pressing the same slot (for example, used weapon is slot 1 and then pressed 1 on keyboard)
 	// Then what happened next is deattaching the weapon
 	bool bShouldEquip = LastWeapon != CurrentWeapon ? true : !PlayerCharacter->IsEquippingWeapon();
 
-	if (Weapons[LastWeapon].IsValid()) Weapons[LastWeapon]->EquipTo(false);
-	PlayerCharacter->SetCarriedWeapon(bShouldEquip ? Weapons[CurrentWeapon] : nullptr);
+	if (Weapons[LastWeapon].IsValid()) 
+		GetWorld()->GetTimerManager().SetTimer(UnequipingTimerHandle, this, &ThisClass::UnequipWeapon, .6f);
+	PlayerCharacter->SetCarriedWeapon(bShouldEquip ? Weapons[CurrentWeapon] : nullptr, Weapons[CurrentWeapon].IsValid());
+}
+
+void UInventoryComponent::UnequipWeapon()
+{
+	if (LastWeapon != CurrentWeapon || !PlayerCharacter->IsEquippingWeapon())
+		Weapons[LastWeapon]->EquipTo(false);
 }
 
 int8 UInventoryComponent::FindEmptySlot()
