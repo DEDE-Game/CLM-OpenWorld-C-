@@ -122,14 +122,15 @@ void AOWCharacter::Die()
 
 	// ...
 	PlayAnimMontage(Montages["Die"].LoadSynchronous());
-	SetLifeSpan(8.f);
+	SetLifeSpan(5.f);
 
 	// Enable rag doll
 	FTimerHandle RagdollTimerHandle;
 	GetWorldTimerManager().SetTimer(RagdollTimerHandle, [this]() {
 		GetMesh()->SetCollisionProfileName(TEXT("Ragdoll"));
 		GetMesh()->SetSimulatePhysics(true);
-		CarriedWeapon->Drop();
+
+		if (CarriedWeapon.IsValid()) CarriedWeapon->Drop();
 	}, 1.f, false);
 }
 
@@ -186,6 +187,47 @@ void AOWCharacter::SetLockOn(AOWCharacter* Target)
 	// Adjust orient movement to false to make the locking works
 	GetCharacterMovement()->bOrientRotationToMovement = !TargetCombat.IsValid();
 	ToggleWalk(TargetCombat.IsValid());
+}
+
+void AOWCharacter::LockNearest()
+{
+	if (!bEquipWeapon) return;
+
+	// Find nearest using sphere trace
+	FVector    TraceLocation = GetActorLocation();
+	FHitResult TraceResult;
+
+	FCollisionObjectQueryParams ObjectParams;
+	ObjectParams.AddObjectTypesToQuery(ECollisionChannel::ECC_Pawn);
+
+	FCollisionQueryParams QueryParams;
+	QueryParams.bTraceComplex = false;
+	QueryParams.AddIgnoredActor(this);
+
+	GetWorld()->SweepSingleByObjectType(
+		TraceResult, 
+		TraceLocation, 
+		TraceLocation, 
+		FQuat::Identity,
+		ObjectParams,
+		FCollisionShape::MakeSphere(250.f),
+		QueryParams
+	);
+
+	if (!TraceResult.bBlockingHit)
+	{
+		SetLockOn(nullptr);
+		
+		return;
+	}
+
+	if (AOWCharacter* Other = Cast<AOWCharacter>(TraceResult.GetActor()); Other && IsEnemy(Other))
+	{
+		DeactivateAction();
+		SetLockOn(Other);
+	}
+	else
+		SetLockOn(nullptr);
 }
 
 void AOWCharacter::LockOn(float DeltaTime)
@@ -255,6 +297,9 @@ void AOWCharacter::Attack()
 	UAnimMontage* Montage = Montages["Attacking"].LoadSynchronous(); 
 	PlayAnimMontage(Montage, 1.f, AttackCombo);
 
+	// Make sure to make noise since the attacking has whoosh sound
+	MakeNoise(1.f, this, GetActorLocation(), 500.f);
+
 	// Updating combo, don't forget to update the combo over too
 	AttackCount = (AttackCount + 1) % 3;
 	GetWorldTimerManager().SetTimer(
@@ -267,7 +312,7 @@ void AOWCharacter::Attack()
 
 void AOWCharacter::OnWeaponHit(AOWCharacter* DamagingCharacter, const FVector& ImpactPoint, const float GivenDamage)
 {
-	if (!Montages.Contains("Hit React")) return;
+	if (!Montages.Contains("Hit React") || IsDead()) return;
 
 	// Hit React
 	HitReaction(ImpactPoint);

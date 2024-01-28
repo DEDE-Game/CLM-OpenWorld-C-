@@ -52,6 +52,11 @@ void AMeleeWeapon::DefaultInitializer()
 		TEXT("/Script/Niagara.NiagaraSystem'/Game/Game/VFX/Combat/NS_BloodTrail.NS_BloodTrail'")
 	);
 	BloodTrail = BloodTrailAsset.Object;
+
+	static ConstructorHelpers::FObjectFinder<UMaterialInterface> BloodSplatterAsset(
+		TEXT("/Script/Engine.MaterialInstanceConstant'/Game/Game/Materials/VFX/MI_BloodSplatter.MI_BloodSplatter'")
+	);
+	BloodSplatter = BloodSplatterAsset.Object;
 }
 
 // ==================== Lifecycles ==================== //
@@ -122,6 +127,7 @@ void AMeleeWeapon::Drop()
 {
 	DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
 
+	// Enable physics
 	BaseMesh->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
 	BaseMesh->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Block);
 	BaseMesh->SetSimulatePhysics(true);
@@ -132,6 +138,13 @@ void AMeleeWeapon::Drop()
 		BaseMesh->SetSimulatePhysics(false);
 		BaseMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	}, 9.f, false);
+
+	// Reset Owner
+	CharacterOwner = nullptr;
+	SetOwner(nullptr);
+
+	// Enable interaction
+	InteractArea->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 }
 
 // ==================== Combat ==================== //

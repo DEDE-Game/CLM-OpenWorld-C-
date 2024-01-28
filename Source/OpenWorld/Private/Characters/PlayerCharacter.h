@@ -140,9 +140,6 @@ private:
 
 	void Dodge();
 
-	/** Find nearest enemy then lock to him */
-	void LockNearest();
-
 	virtual void Attack() override;
 
 	/**== CHARGING ATTACK ==**/

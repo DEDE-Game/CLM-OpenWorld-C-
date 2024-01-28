@@ -291,47 +291,6 @@ void APlayerCharacter::Dodge()
 	PlayAnimMontage(Montages["Dodging"].LoadSynchronous(), 1.f, SectionName);
 }
 
-void APlayerCharacter::LockNearest()
-{
-	if (!bEquipWeapon) return;
-
-	// Find nearest using sphere trace
-	FVector    TraceLocation = GetActorLocation();
-	FHitResult TraceResult;
-
-	FCollisionObjectQueryParams ObjectParams;
-	ObjectParams.AddObjectTypesToQuery(ECollisionChannel::ECC_Pawn);
-
-	FCollisionQueryParams QueryParams;
-	QueryParams.bTraceComplex = false;
-	QueryParams.AddIgnoredActor(this);
-
-	GetWorld()->SweepSingleByObjectType(
-		TraceResult, 
-		TraceLocation, 
-		TraceLocation, 
-		FQuat::Identity,
-		ObjectParams,
-		FCollisionShape::MakeSphere(250.f),
-		QueryParams
-	);
-
-	if (!TraceResult.bBlockingHit)
-	{
-		SetLockOn(nullptr);
-		
-		return;
-	}
-
-	if (AOWCharacter* Other = Cast<AOWCharacter>(TraceResult.GetActor()); Other && IsEnemy(Other))
-	{
-		DeactivateAction();
-		SetLockOn(Other);
-	}
-	else
-		SetLockOn(nullptr);
-}
-
 void APlayerCharacter::ChargeAttack()
 {
 	if (!bEquipWeapon) return;

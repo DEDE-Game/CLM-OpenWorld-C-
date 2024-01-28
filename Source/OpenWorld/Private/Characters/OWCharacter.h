@@ -145,8 +145,9 @@ protected:
 	 */
 	virtual void SetLockOn(AOWCharacter* Target);
 
+	/** Find nearest enemy then lock to him */
+	void LockNearest();
 	void LockOn(float DeltaTime);
-
 	void HitReaction(const FVector& ImpactPoint);
 
 	virtual void Attack();
