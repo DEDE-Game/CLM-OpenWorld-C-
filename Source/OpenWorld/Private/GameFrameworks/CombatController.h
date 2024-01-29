@@ -16,37 +16,49 @@ class ACombatController : public AAIController
 public:
 	ACombatController();
 
-	// ===== Lifecycles ========== //
+	// ***===== Lifecycles ==========*** //
 
 	virtual void Tick(float DeltaTime) override;
 
-	// ===== AI ========== //
+	// ***===== AI ==========*** //
 
 	void ActivateReaction();
 
 	virtual void OnMoveCompleted(FAIRequestID RequestID, const FPathFollowingResult& Result) override;
 
 protected:
-	// ===== Lifecycles ========== //
+	// ***===== Lifecycles ==========*** //
 
 	virtual void BeginPlay() override;
 
 private:
 	void ReferencesInitializer();
 
-	// ===== References ========== //
+	// ***===== References ==========*** //
 
 	UPROPERTY()
 	TWeakObjectPtr<ACombatCharacter> CombatCharacter;
 
-	// ===== AI ========== //
+	// ***===== AI ==========*** //
 
 	bool bDisableSense = false;
 
 	UFUNCTION()
 	virtual void OnTargetSense(AActor* Actor, FAIStimulus Stimulus);
 
-	// ===== Combat ========== //
+	// ***===== Patrolling ==========*** //
+
+	FTimerHandle PatrollingDelayHandler;
+	
+	UPROPERTY(EditAnywhere, Category=Patrolling)
+	float PatrollingDelayMin = 2.f;
+
+	UPROPERTY(EditAnywhere, Category=Patrolling)
+	float PatrollingDelayMax = 5.f;
+
+	void StartPatrolling();
+
+	// ***===== Combat ==========*** //
 	
 	// *** Attacking *** //
 	UPROPERTY(EditAnywhere, Category=Combat)

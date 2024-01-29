@@ -55,6 +55,7 @@ void ACombatController::BeginPlay()
 
     // ...
     ReferencesInitializer();
+    StartPatrolling();
 }
 
 void ACombatController::Tick(float DeltaTime)
@@ -71,7 +72,20 @@ void ACombatController::OnMoveCompleted(FAIRequestID RequestID, const FPathFollo
     // Then attack if success
     bool bCanAttack = Result.IsSuccess() && CombatCharacter->TargetCombat.IsValid();
 
+    // Start to attack
     if (bCanAttack) Engage();
+    else
+    {
+        // Investigate then start to patrolling
+        float Timer = FMath::RandRange(PatrollingDelayMin, PatrollingDelayMax);
+
+        GetWorldTimerManager().SetTimer(
+            PatrollingDelayHandler,
+            this,
+            &ThisClass::StartPatrolling,
+            Timer
+        );
+    }
 }
 
 void ACombatController::ActivateReaction()
@@ -101,13 +115,35 @@ void ACombatController::OnTargetSense(AActor* Actor, FAIStimulus Stimulus)
     CombatCharacter->SetLockOn(Other);
 }
 
+// ==================== Patrolling ==================== //
+
+void ACombatController::StartPatrolling()
+{
+    // Unequip any weapon
+    if (CombatCharacter->bEquipWeapon && !CombatCharacter->TargetCombat.IsValid())
+        CombatCharacter->SwapWeapon();
+
+    CombatCharacter->ToggleWalk(true);
+
+    // Make sure to re-enable sense
+    bDisableSense = false;
+
+    // Pick random place
+    UNavigationSystemV1* NavSystem = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
+    FNavLocation NavLocationResult;
+
+    NavSystem->GetRandomReachablePointInRadius(CombatCharacter->GetActorLocation(), 1500.f, NavLocationResult);
+
+    MoveToLocation(NavLocationResult.Location);
+}
+
 // ==================== Combat ==================== //
 
 void ACombatController::CheckRange()
 {
     if (!CombatCharacter.IsValid() || !CombatCharacter->TargetCombat.IsValid())
     {
-        bDisableSense = false;
+        StartPatrolling();
 
         return;
     }
@@ -136,12 +172,13 @@ void ACombatController::Engage()
 {
     if (!CombatCharacter->TargetCombat.IsValid())
     {
-        bDisableSense = false;
+        StartPatrolling();
 
         return;
     }
 
     // Reset
+    CombatCharacter->ToggleWalk(false);
     bStrafing     = false;
     bDisableSense = true;
 
