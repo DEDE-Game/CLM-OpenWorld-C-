@@ -43,7 +43,7 @@ void ACombatCharacter::DefaultInitializer()
     AIControllerClass = CombatControllerAsset.Class;
 
     static ConstructorHelpers::FClassFinder<UUserWidget> HealthBarAsset(
-        TEXT("/Game/Game/Blueprints/Widgets/Enemy/WBP_HealthBar")
+        TEXT("/Game/Game/Blueprints/Widgets/CombatCharacter/WBP_HealthBar")
     );
     HealthBarComponent->SetWidgetClass(HealthBarAsset.Class);
 
@@ -70,6 +70,7 @@ void ACombatCharacter::BeginPlay()
     // Initializing UI
     HealthBar = Cast<UHealthBar>(HealthBarComponent->GetUserWidgetObject());
     HealthBar->UpdateHealth(Health / MaxHealth);
+    if (Team == ETeam::T_Friend) HealthBar->SetHealthColor({ 0.548f, 0.973f, 0.162f, 1.f });
 }
 
 void ACombatCharacter::PossessedBy(AController* NewController)
@@ -96,9 +97,9 @@ void ACombatCharacter::RandomizeWeapon()
     CarriedWeapon->Pickup(this, TEXT("Back0 Socket"));
 }
 
-void ACombatCharacter::OnWeaponHit(AOWCharacter* DamagingCharacter, const FVector& HitImpact, const float GivenDamage)
+void ACombatCharacter::OnWeaponHit(AOWCharacter* DamagingCharacter, const FVector& HitImpact, const float GivenDamage, bool bBlockable)
 {
-    Super::OnWeaponHit(DamagingCharacter, HitImpact, GivenDamage);
+    Super::OnWeaponHit(DamagingCharacter, HitImpact, GivenDamage, bBlockable);
 
     // Make the enemy lock to that damaging actor with delay to give a time for hit reaction
     if (!TargetCombat.IsValid() || DamagingCharacter != TargetCombat.Get())
@@ -115,9 +116,9 @@ void ACombatCharacter::OnWeaponHit(AOWCharacter* DamagingCharacter, const FVecto
 
 void ACombatCharacter::SwapWeapon()
 {
-    Super::SwapWeapon();
-
     bEquipWeapon = !bEquipWeapon;
+    
+    Super::SwapWeapon();
 }
 
 void ACombatCharacter::SetLockOn(AOWCharacter* Target)

@@ -34,7 +34,7 @@ public:
 	// ===== Combat ========== //
 
 	void EnableCollision(bool bEnabled);
-	void SetTempDamage(float TempDamage);
+	void SetTempDamage(float TempDamage, bool bDamageBlockable = true);
 	virtual void ReceiveParticleData_Implementation(const TArray<FBasicParticleData>& Data, UNiagaraSystem* NiagaraSystem, const FVector& SimulationPositionOffset) override;
 
 protected:
@@ -82,6 +82,9 @@ protected:
 
 	UPROPERTY()
     TArray<AActor*> IgnoredActors;
+
+	/** If its false, even thought the target combat is on blocking state he will still get damage */
+	bool bBlockable = true;
 
 	UPROPERTY(EditAnywhere, Category=Combat)
 	float Damage = 20.f;

@@ -2,6 +2,7 @@
 
 #include "Characters/OWCharacter.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/SphereComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -30,6 +31,13 @@ AOWCharacter::AOWCharacter()
 	/* Crouching */
 	GetCharacterMovement()->NavAgentProps.bCanCrouch = true;
 
+	// Kick hitbox
+	KickHitbox = CreateDefaultSubobject<USphereComponent>(TEXT("Kick Hitbox"));
+	KickHitbox->SetupAttachment(GetMesh(), TEXT("foot_r"));	// * Make sure we have "foot_r" socket
+	KickHitbox->SetCollisionEnabled(ECollisionEnabled::NoCollision); /* Set it to query only later */
+	KickHitbox->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
+	KickHitbox->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Overlap);
+
 	// ...
 	DefaultInitializer();
 }
@@ -46,6 +54,11 @@ void AOWCharacter::DefaultInitializer()
 	);
 	BlockingSound = BlockingAsset.Object;
 
+	static ConstructorHelpers::FObjectFinder<USoundBase> KickingAsset(
+		TEXT("/Script/MetasoundEngine.MetaSoundSource'/Game/Game/Audio/Combats/MS_Kicking.MS_Kicking'")
+	);
+	KickingSound = KickingAsset.Object;
+
 	static ConstructorHelpers::FObjectFinder<UNiagaraSystem> BloodSplashAsset(
 		TEXT("/Script/Niagara.NiagaraSystem'/Game/Game/VFX/Combat/NS_BloodSplash.NS_BloodSplash'")
 	);
@@ -58,6 +71,8 @@ void AOWCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	// Collision Events
+	KickHitbox->OnComponentBeginOverlap.AddDynamic(this, &ThisClass::OnKick);
 }
 
 void AOWCharacter::Tick(float DeltaTime)
@@ -254,7 +269,7 @@ void AOWCharacter::LockOn(float DeltaTime)
 	}
 }
 
-void AOWCharacter::HitReaction(const FVector& ImpactPoint)
+void AOWCharacter::HitReaction(const FVector& ImpactPoint, bool bBlockable)
 {
 	if (!Montages.Contains("Blocking") || !Montages.Contains("Hit React")) return;
 
@@ -268,7 +283,7 @@ void AOWCharacter::HitReaction(const FVector& ImpactPoint)
 	int32 RadAngle   = FMath::FloorToInt32(FMath::Acos(DotProduct));
 
 	// Check if the player succeed block the hit
-	bSucceedBlocking = GetCurrentMontage() == Montages["Blocking"].Get() && RadAngle == 0;
+	bSucceedBlocking = bBlockable && GetCurrentMontage() == Montages["Blocking"].Get() && RadAngle == 0;
 
 	// Animation Montage (Depends on succeed blocking or no)
 	FName MontageToPlay  = bSucceedBlocking ? TEXT("Blocking") : TEXT("Hit React");
@@ -283,6 +298,35 @@ void AOWCharacter::HitReaction(const FVector& ImpactPoint)
 void AOWCharacter::ComboOver()
 {
 	AttackCount = 0;
+}
+
+void AOWCharacter::StartKick()
+{
+	KickHitbox->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+
+	PlayAnimMontage(Montages["Attacking"].LoadSynchronous(), 1.f, TEXT("Kicking"));
+}
+
+void AOWCharacter::OnKick(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	if (OtherActor == this) return;
+
+	IHitInterface* ActorHit = Cast<IHitInterface>(OtherActor);
+	
+	if (!ActorHit || !ActorHit->IsEnemy(this)) return;
+
+	// Just make other actor hit to be unblocked
+	ActorHit->OnWeaponHit(this, KickHitbox->GetComponentLocation(), 0.f, false);
+
+	// Don't forget to disable the collision :)
+	KickHitbox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	// Play audio
+	UGameplayStatics::PlaySoundAtLocation(
+		this,
+		KickingSound.LoadSynchronous(),
+		KickHitbox->GetComponentLocation()
+	);
 }
 
 void AOWCharacter::Attack()
@@ -310,12 +354,12 @@ void AOWCharacter::Attack()
 	);
 }
 
-void AOWCharacter::OnWeaponHit(AOWCharacter* DamagingCharacter, const FVector& ImpactPoint, const float GivenDamage)
+void AOWCharacter::OnWeaponHit(AOWCharacter* DamagingCharacter, const FVector& ImpactPoint, const float GivenDamage, bool bBlockable)
 {
 	if (!Montages.Contains("Hit React") || IsDead()) return;
 
 	// Hit React
-	HitReaction(ImpactPoint);
+	HitReaction(ImpactPoint, bBlockable);
 
 	// Reset combat
 	ToggleMovement(true);
@@ -323,19 +367,25 @@ void AOWCharacter::OnWeaponHit(AOWCharacter* DamagingCharacter, const FVector& I
 
 	if (!bSucceedBlocking)
 	{
-		// Show hit visualization
-		UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, BloodSplash.LoadSynchronous(), ImpactPoint);
+		ToggleBlock(false);
 
-		// Reduce health
-		SetHealth(-GivenDamage);
+		if (GivenDamage > 0.f)
+		{
+			// Show hit visualization
+			UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, BloodSplash.LoadSynchronous(), ImpactPoint);
+
+			// Reduce health
+			SetHealth(-GivenDamage);
+		}
 	}
 
 	// Sound (Blocking or hitflesh sound)
-	UGameplayStatics::PlaySoundAtLocation(
-		this, 
-		bSucceedBlocking ? BlockingSound.LoadSynchronous() : HitfleshSound.LoadSynchronous(), 
-		ImpactPoint
-	);
+	if (GivenDamage > 0.f)
+		UGameplayStatics::PlaySoundAtLocation(
+			this, 
+			bSucceedBlocking ? BlockingSound.LoadSynchronous() : HitfleshSound.LoadSynchronous(), 
+			ImpactPoint
+		);
 }
 
 // ==================== Audio ==================== //

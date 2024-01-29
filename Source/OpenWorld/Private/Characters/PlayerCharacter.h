@@ -119,6 +119,9 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category=Input)
 	TSoftObjectPtr<UInputAction> InteractAction;
 
+	UPROPERTY(EditDefaultsOnly, Category=Input)
+	TSoftObjectPtr<UInputAction> KickAction;
+
 	// ===== Locomotions ========== //
 
 	FVector2D MovementInput;
@@ -144,19 +147,20 @@ private:
 
 	/**== CHARGING ATTACK ==**/
 
-	UPROPERTY(EditAnywhere, Category=Combat)
+	UPROPERTY(EditAnywhere, Category = Combat)
 	float DamageMultiplierRate = .8f;
 
 	float DamageMultiplier = 1.f;
 
 	/** Once the time is passed, will use charge attack instead */
-	FTimerHandle ChargeTimer;
-	float ChargeAfter = .6f;
+	FTimerHandle ChargeTimerHandle;
+	float ChargeAfter = .3f;
 
 	bool bCharging = false;
 
-	void ChargeAttack();
-	void DoChargeAttack();
+	void StartChargeAttack();
+	void OnChargeAttack();
+	void PerformChargeAttack();
 
 	// ===== Takedown ========== //
 
@@ -170,7 +174,7 @@ private:
 	void OnLeaveTakedown(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
 	void PerformTakedown();
-	
+
 	// ===== Environments ========== //
 
 	/**=== Foliages ===**/

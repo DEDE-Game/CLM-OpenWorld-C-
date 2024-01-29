@@ -109,7 +109,7 @@ void AMeleeWeapon::Pickup(AOWCharacter* NewOwner, FName SocketName)
 	CharacterOwner = NewOwner;
 	AttachedSocket = SocketName;
 	SetOwner(NewOwner);
-	EquipTo(true);
+	EquipTo(false);
 
 	// Disable interaction
 	InteractArea->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -160,7 +160,7 @@ void AMeleeWeapon::ApplyDamage(FHitResult &TraceResult)
 	float RandomOffset = FMath::RandRange(1.f, 5.f); 
 	float GivenDamage  = FMath::RandRange(Damage - RandomOffset, Damage + RandomOffset);
 
-	ActorHit->OnWeaponHit(CharacterOwner.Get(), TraceResult.ImpactPoint, GivenDamage);
+	ActorHit->OnWeaponHit(CharacterOwner.Get(), TraceResult.ImpactPoint, GivenDamage, bBlockable);
 
 	// Spawn blood trail only when oponent is not blocking the attack
 	if (!ActorHit->IsBlocking())
@@ -216,14 +216,16 @@ void AMeleeWeapon::EnableCollision(bool bEnabled)
 	}
 }
 
-void AMeleeWeapon::SetTempDamage(float TempDamage)
+void AMeleeWeapon::SetTempDamage(float TempDamage, bool bDamageBlockable /*= true*/)
 {
 	// Update it now
-	Damage = TempDamage;
+	Damage 	   = TempDamage;
+	bBlockable = bDamageBlockable;
 
 	// Set the timer
-	GetWorldTimerManager().SetTimer(TempDamageDelayHandler, [&]() {
-		Damage = DefaultDamage;
+	GetWorldTimerManager().SetTimer(TempDamageDelayHandler, [this]() {
+		Damage 	   = DefaultDamage;
+		bBlockable = true;
 	}, 1.f, false);
 }
 

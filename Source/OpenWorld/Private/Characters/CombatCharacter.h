@@ -30,7 +30,7 @@ public:
 	// ===== Combat ========== //
 
 	/*~ */
-	virtual void OnWeaponHit(AOWCharacter* DamagingCharacter, const FVector& HitImpact, const float GivenDamage) override;
+	virtual void OnWeaponHit(AOWCharacter* DamagingCharacter, const FVector& HitImpact, const float GivenDamage, bool bBlockable) override;
 
 protected:
 	// ===== References ========== //

@@ -29,7 +29,6 @@ void UInventoryComponent::AddWeapon(AMeleeWeapon* NewWeapon)
 	if (Slot == -1) return;
 
 	Weapons[Slot] = NewWeapon;
-	ChangeWeapon(Slot);
 
 	// Determine the socket
 	FName SocketName = *FString::Printf(TEXT("Back%d Socket"), Slot);

@@ -9,6 +9,7 @@
 #include "OWCharacter.generated.h"
 
 class AMeleeWeapon;
+class USphereComponent;
 class UNiagaraSystem;
 
 UCLASS(Abstract)
@@ -31,7 +32,7 @@ public:
 	{
 		return bSucceedBlocking;
 	}
-	virtual void OnWeaponHit(AOWCharacter* DamagingCharacter, const FVector& ImpactPoint, const float GivenDamage) override;
+	virtual void OnWeaponHit(AOWCharacter* DamagingCharacter, const FVector& ImpactPoint, const float GivenDamage, bool bBlockable) override;
 	//~ End IHitInterface
 
 	/** Used to deactivate any action such as takedown stealth */
@@ -41,6 +42,11 @@ protected:
 	// ***===== Lifecycles ==========*** //
 
 	virtual void BeginPlay() override;
+
+	// ***===== Components ==========*** //
+
+	UPROPERTY(VisibleAnywhere) 
+	TObjectPtr<USphereComponent> KickHitbox;
 
 	// ***===== Locomotions ==========*** //
 
@@ -148,12 +154,20 @@ protected:
 	/** Find nearest enemy then lock to him */
 	void LockNearest();
 	void LockOn(float DeltaTime);
-	void HitReaction(const FVector& ImpactPoint);
+	void HitReaction(const FVector& ImpactPoint, bool bBlockable);
 
 	virtual void Attack();
 
 	/** Called when the target is out of combat radius */	
 	virtual void OnLostInterest() {};
+
+	// *** Kicking *** //
+
+	/** Kicking make enemy's block is toggled off */
+	void StartKick();
+
+	UFUNCTION()
+	void OnKick(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
     // ***===== Animations ==========*** //
 
@@ -170,6 +184,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category=Audio)
 	TSoftObjectPtr<USoundBase> BlockingSound;
+
+	UPROPERTY(EditDefaultsOnly, Category=Audio)
+	TSoftObjectPtr<USoundBase> KickingSound;
 
 	UFUNCTION(BlueprintCallable)
 	void PlayFootstepSound();
@@ -196,6 +213,10 @@ public:
 	FORCEINLINE const bool IsDead() const
 	{
 		return Health == 0.f;
+	}
+	FORCEINLINE const bool IsOnBlocking() const
+	{
+		return GetCurrentMontage() == Montages["Blocking"].Get();
 	}
 	FORCEINLINE ETeam GetTeam() const 
 	{

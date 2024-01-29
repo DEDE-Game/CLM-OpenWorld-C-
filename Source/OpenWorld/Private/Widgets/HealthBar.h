@@ -17,6 +17,7 @@ public:
 	// ===== Interfaces ========== //
 
 	void UpdateHealth(float Percentage);
+	void SetHealthColor(const FLinearColor& LinearColor);
 
 private:
 	UPROPERTY(meta=(BindWidget))

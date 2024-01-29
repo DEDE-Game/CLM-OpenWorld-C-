@@ -120,9 +120,10 @@ void ACombatController::OnTargetSense(AActor* Actor, FAIStimulus Stimulus)
 void ACombatController::StartPatrolling()
 {
     // Unequip any weapon
-    if (CombatCharacter->bEquipWeapon && !CombatCharacter->TargetCombat.IsValid())
+    if (CombatCharacter->bEquipWeapon && (!CombatCharacter->TargetCombat.IsValid() || CombatCharacter->TargetCombat->IsDead()))
         CombatCharacter->SwapWeapon();
 
+    CombatCharacter->SetLockOn(nullptr);
     CombatCharacter->ToggleWalk(true);
 
     // Make sure to re-enable sense
@@ -141,19 +142,19 @@ void ACombatController::StartPatrolling()
 
 void ACombatController::CheckRange()
 {
-    if (!CombatCharacter.IsValid() || !CombatCharacter->TargetCombat.IsValid())
-    {
-        StartPatrolling();
-
-        return;
-    }
-
     FVector CharacterLocation = CombatCharacter->GetActorLocation();
     FVector TargetLocation    = CombatCharacter->TargetCombat->GetActorLocation();
 
     float Distance = (TargetLocation - CharacterLocation).Size();
 
-    if   (Distance <= HitRange) CombatCharacter->Attack();
+    if   (Distance <= HitRange)
+    {
+        // Try to kick enemy that is on blocking
+        bool bShouldAttack = CombatCharacter->TargetCombat->IsBlocking() ? FMath::RandBool() : true;
+
+        if (bShouldAttack) CombatCharacter->Attack();
+        else               CombatCharacter->StartKick();
+    }
     else
     {
         bDisableSense = false;
@@ -170,7 +171,7 @@ void ACombatController::FinishedReaction()
 
 void ACombatController::Engage()
 {
-    if (!CombatCharacter->TargetCombat.IsValid())
+    if (!CombatCharacter->TargetCombat.IsValid() || CombatCharacter->TargetCombat->IsDead())
     {
         StartPatrolling();
 

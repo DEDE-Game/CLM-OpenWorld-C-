@@ -13,6 +13,7 @@
 #include "Materials/MaterialParameterCollectionInstance.h"
 #include "Materials/MaterialParameterCollection.h"
 #include "Weapons/MeleeWeapon.h"
+#include "PlayerCharacter.h"
 
 APlayerCharacter::APlayerCharacter()
 {
@@ -97,6 +98,11 @@ void APlayerCharacter::DefaultInitializer()
 	);
 	InteractAction = InteractActionAsset.Object;
 
+	static ConstructorHelpers::FObjectFinder<UInputAction> KickActionAsset(
+		TEXT("/Script/EnhancedInput.InputAction'/Game/Game/Inputs/IA_Kick.IA_Kick'")
+	);
+	KickAction = KickActionAsset.Object;
+
 	static ConstructorHelpers::FObjectFinder<UMaterialParameterCollection> GlobalParamAsset(
 		TEXT("/Script/Engine.MaterialParameterCollection'/Game/Game/Materials/MP_Global.MP_Global'")
 	);
@@ -166,7 +172,7 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent *PlayerInputCom
 
 		EnhancedInput->BindAction(SwapWeaponAction.LoadSynchronous(), ETriggerEvent::Triggered, this, &ThisClass::ChangeWeapon);
 
-		EnhancedInput->BindAction(AttackAction.LoadSynchronous(), ETriggerEvent::Triggered, this, &ThisClass::ChargeAttack);
+		EnhancedInput->BindAction(AttackAction.LoadSynchronous(), ETriggerEvent::Triggered, this, &ThisClass::StartChargeAttack);
 		EnhancedInput->BindAction(AttackAction.LoadSynchronous(), ETriggerEvent::Completed, this, &ThisClass::Attack);
 
 		EnhancedInput->BindAction(BlockAction.LoadSynchronous(), ETriggerEvent::Started, this, &ThisClass::Block);
@@ -175,6 +181,8 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent *PlayerInputCom
 		EnhancedInput->BindAction(DodgeAction.LoadSynchronous(), ETriggerEvent::Triggered, this, &ThisClass::Dodge);
 
 		EnhancedInput->BindAction(InteractAction.LoadSynchronous(), ETriggerEvent::Triggered, this, &ThisClass::Interact);
+
+		EnhancedInput->BindAction(KickAction.LoadSynchronous(), ETriggerEvent::Triggered, this, &ThisClass::StartKick);
 	}
 }
 
@@ -291,47 +299,41 @@ void APlayerCharacter::Dodge()
 	PlayAnimMontage(Montages["Dodging"].LoadSynchronous(), 1.f, SectionName);
 }
 
-void APlayerCharacter::ChargeAttack()
+void APlayerCharacter::StartChargeAttack()
 {
-	if (!bEquipWeapon) return;
+	if (!bEquipWeapon || GetCurrentMontage() == Montages["Attacking"].Get()) return;
 
 	DamageMultiplier += DamageMultiplierRate * GetWorld()->GetDeltaSeconds();
 
 	// Start timer for the first time
-	if (!GetWorldTimerManager().IsTimerActive(ChargeTimer) && !bCharging)
-		 GetWorldTimerManager().SetTimer(ChargeTimer, this, &ThisClass::DoChargeAttack, ChargeAfter);
+	if (!GetWorldTimerManager().IsTimerActive(ChargeTimerHandle) && !bCharging)
+		 GetWorldTimerManager().SetTimer(ChargeTimerHandle, this, &ThisClass::OnChargeAttack, ChargeAfter);
 }
 
-void APlayerCharacter::DoChargeAttack()
+void APlayerCharacter::OnChargeAttack()
 {
 	if (!Montages.Contains("Charge Attack")) return;
 
+	// Start timer to perform actual charge attack
+	GetWorldTimerManager().SetTimer(ChargeTimerHandle, this, &ThisClass::Attack, 1.5f);
+
+	// ...
+	bCharging = true;
+
 	LockNearest();
 	PlayAnimMontage(Montages["Charge Attack"].LoadSynchronous());
-
-	bCharging = true;
 }
 
 void APlayerCharacter::Attack()
 {
-	if (!CarriedWeapon.IsValid()) return;
+	if (!bEquipWeapon) return;
 
 	// Takedown
 	if (TargetTakedown.IsValid())
 		PerformTakedown();
 	// Charge Attack
 	else if (bCharging)
-	{
-		bCanMove = false;
-		GetCharacterMovement()->StopMovementImmediately();
-
-		CarriedWeapon->SetTempDamage(
-			CarriedWeapon->GetDamage() * DamageMultiplier
-		);
-
-		FName ChargeAttackSection = *FString::Printf(TEXT("%sChargeAttack"), *CarriedWeapon->GetWeaponName());
-		PlayAnimMontage(Montages["Attacking"].LoadSynchronous(), 1.f, ChargeAttackSection);
-	}
+        PerformChargeAttack();
 	// Ordinary attack
 	else 
 	{
@@ -343,7 +345,21 @@ void APlayerCharacter::Attack()
 	// Reset
 	DamageMultiplier = 1.f;
 	bCharging        = false;
-	GetWorldTimerManager().ClearTimer(ChargeTimer);
+	GetWorldTimerManager().ClearTimer(ChargeTimerHandle);
+}
+
+void APlayerCharacter::PerformChargeAttack()
+{
+    bCanMove = false;
+    GetCharacterMovement()->StopMovementImmediately();
+
+    FName ChargeAttackSection = *FString::Printf(TEXT("%sChargeAttack"), *CarriedWeapon->GetWeaponName());
+    PlayAnimMontage(Montages["Attacking"].LoadSynchronous(), 1.f, ChargeAttackSection);
+
+    CarriedWeapon->SetTempDamage(
+        CarriedWeapon->GetDamage() * DamageMultiplier,
+		false
+	);
 }
 
 void APlayerCharacter::DeactivateAction()
