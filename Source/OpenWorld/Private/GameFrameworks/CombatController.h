@@ -41,10 +41,43 @@ private:
 
 	// ***===== AI ==========*** //
 
+	// *** Sensing *** //
+
 	bool bDisableSense = false;
 
 	UFUNCTION()
 	virtual void OnTargetSense(AActor* Actor, FAIStimulus Stimulus);
+
+	// *** Decision *** //
+    // Get the decision randomly, but we can adjust the aggresivly
+    /**
+     * 0: Attack
+     * 1: Strafing
+	 * 2: Blocking
+     */
+	UPROPERTY(EditAnywhere, Category=Combat)
+	TArray<int8> DecisionChances = { 0, 0, 0, 0, 0, 1, 1, 1, 2 };
+
+	/** Whether decide to strafe or attack */
+	FTimerHandle DecisionDelayHandle;
+
+	UPROPERTY(EditAnywhere, Category=Combat)
+	float DecisionDelayMin = .7f;
+
+	UPROPERTY(EditAnywhere, Category=Combat)
+	float DecisionDelayMax = 3.5f;
+
+	void Decide();
+
+	FORCEINLINE void ReDecide()
+	{
+		GetWorldTimerManager().ClearTimer(DecisionDelayHandle);
+		Decide();
+	}
+
+    // *** Reactions *** //
+    FTimerHandle ReactionDelay;
+    FORCEINLINE void FinishedReaction();
 
 	// ***===== Patrolling ==========*** //
 
@@ -64,32 +97,7 @@ private:
 	UPROPERTY(EditAnywhere, Category=Combat)
 	float HitRange = 300.f;
 
-	void CheckRange();
-
-    // *** Reactions *** //
-    FTimerHandle ReactionDelay;
-    FORCEINLINE void FinishedReaction();
-
-	// *** Engaging *** //
-    // Get the decision randomly, but we can adjust the aggresivly
-    /**
-     * 0: Attack
-     * 1: Strafing
-	 * 2: Blocking
-     */
-	UPROPERTY(EditAnywhere, Category=Combat)
-	TArray<int8> EngagingChances = { 0, 0, 0, 0, 0, 1, 1, 1, 2 };
-
-	/** Whether decide to strafe or attack */
-	FTimerHandle EngageDelayHandle;
-
-	UPROPERTY(EditAnywhere, Category=Combat)
-	float EngageDelayMin = .7f;
-
-	UPROPERTY(EditAnywhere, Category=Combat)
-	float EngageDelayMax = 4.5f;
-
-	void Engage();
+	void Attacking();
 
 	// *** Strafing *** //
 	bool bStrafing = false;

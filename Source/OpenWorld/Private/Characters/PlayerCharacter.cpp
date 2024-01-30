@@ -410,7 +410,6 @@ void APlayerCharacter::Parry(AOWCharacter* DamagingCharacter)
 
 void APlayerCharacter::ParrySlowdown(float Value)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Parry Slowdown: %f"), Value);
 	UGameplayStatics::SetGlobalTimeDilation(this, Value);
 }
 

@@ -70,10 +70,10 @@ void ACombatController::Tick(float DeltaTime)
 void ACombatController::OnMoveCompleted(FAIRequestID RequestID, const FPathFollowingResult& Result)
 {
     // Then attack if success
-    bool bCanAttack = Result.IsSuccess() && CombatCharacter->TargetCombat.IsValid();
+    bool bCanDecide = Result.IsSuccess() && CombatCharacter->TargetCombat.IsValid();
 
-    // Start to attack
-    if (bCanAttack) Engage();
+    // Start to Decide
+    if (bCanDecide) Decide();
     else
     {
         // Investigate then start to patrolling
@@ -90,7 +90,7 @@ void ACombatController::OnMoveCompleted(FAIRequestID RequestID, const FPathFollo
 
 void ACombatController::ActivateReaction()
 {
-   if (!CombatCharacter->bEquipWeapon) CombatCharacter->SwapWeapon();
+    if (!CombatCharacter->bEquipWeapon) CombatCharacter->SwapWeapon();
 
     GetWorldTimerManager().SetTimer(
         ReactionDelay,
@@ -146,39 +146,44 @@ void ACombatController::StartPatrolling()
 
 // ==================== Combat ==================== //
 
-void ACombatController::CheckRange()
+void ACombatController::Attacking()
 {
     FVector CharacterLocation = CombatCharacter->GetActorLocation();
     FVector TargetLocation    = CombatCharacter->TargetCombat->GetActorLocation();
 
     float Distance = (TargetLocation - CharacterLocation).Size();
 
-    // If character is not ready to attack yet
-    if (!CombatCharacter->IsReady())
+    // Make sure to use weapon first
+    if (!CombatCharacter->bEquipWeapon) CombatCharacter->SwapWeapon();
+
+    // If character is not ready to attack yet OR
+    // Only attacking if the enemy's target is self instead, he will just strafing, blocking, etc
+    bool bNotForceAttack = CombatCharacter->GetTargetCombat()->GetTargetCombat() /* Enemy's target combat */ != CombatCharacter &&
+                        !FMath::RandBool();
+    if (!CombatCharacter->IsReady() || bNotForceAttack)
     {
-        GetWorldTimerManager().ClearTimer(EngageDelayHandle);
-        Engage();
+        ReDecide();
 
         return;
     }
 
-    // Attacking
-    if (Distance <= HitRange)
-    {
-        // Try to kick enemy that is on blocking
-        bool bShouldAttack = CombatCharacter->TargetCombat->IsBlocking() ? FMath::RandBool() : true;
-
-        if (bShouldAttack) CombatCharacter->Attack();
-        else               CombatCharacter->StartKick();
-    }
     // Go to that target combat
-    else
+    if (Distance > HitRange)
     {
         bDisableSense = false;
 
         CombatCharacter->LockNearest();
         MoveToLocation(TargetLocation, 250.f, false);
+
+        return;
     }
+
+    // The distance is close, so we can attack now
+    // Try to kick enemy that is on blocking
+    bool bShouldAttack = CombatCharacter->TargetCombat->IsBlocking() ? FMath::RandBool() : true;
+
+    if (bShouldAttack) CombatCharacter->Attack();
+    else               CombatCharacter->StartKick();
 }
 
 void ACombatController::FinishedReaction()
@@ -186,7 +191,7 @@ void ACombatController::FinishedReaction()
     CombatCharacter->SetLockOn(CombatCharacter->TargetCombat.Get());
 }
 
-void ACombatController::Engage()
+void ACombatController::Decide()
 {
     // Reset
     CombatCharacter->ToggleWalk(false);
@@ -195,12 +200,13 @@ void ACombatController::Engage()
     GetWorldTimerManager().ClearTimer(PatrollingDelayHandler);
 
     // Randomize next decision
-    float NextDecisionTimer = FMath::RandRange(EngageDelayMin, EngageDelayMax);
-    GetWorldTimerManager().SetTimer(EngageDelayHandle, this, &ThisClass::Engage, NextDecisionTimer);
+    float NextDecisionTimer = FMath::RandRange(DecisionDelayMin, DecisionDelayMax);
+    GetWorldTimerManager().SetTimer(DecisionDelayHandle, this, &ThisClass::Decide, NextDecisionTimer);
 
     // If stunned, do none
     if (CombatCharacter->IsOnMontage("Stunned")) return;
 
+    // When the enemy is dead
     if (!CombatCharacter->TargetCombat.IsValid() || CombatCharacter->TargetCombat->IsDead())
     {
         // Check for nearest enemy first
@@ -216,14 +222,14 @@ void ACombatController::Engage()
     }
 
     // Get the decision randomly, but we can adjust the aggresivly
-    int8 Decision = FMath::RandRange(0, EngagingChances.Num() - 1);
-    Decision = EngagingChances[Decision];
-    UE_LOG(LogTemp, Warning, TEXT("Engage: %s"), Decision == 0 ? TEXT("Attack") : Decision == 1 ? TEXT("Strafing") : TEXT("Blocking"));
+    int8 Decision = FMath::RandRange(0, DecisionChances.Num() - 1);
+    Decision = DecisionChances[Decision];
+    
     switch (Decision)
     {
     // Attacking
     case 0:
-        CheckRange();
+        Attacking();
         break;
 
     // Strafing
@@ -248,7 +254,7 @@ void ACombatController::Engage()
     }
 
     default:
-        CheckRange();
+        Attacking();
         break;
     }
 }

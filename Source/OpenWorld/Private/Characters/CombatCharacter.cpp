@@ -151,11 +151,11 @@ void ACombatCharacter::EnableWeapon(bool bEnabled)
         UGameplayStatics::SetGlobalTimeDilation(this, 1.f);
 }
 
-void ACombatCharacter::SwapWeapon()
+void ACombatCharacter::AttachWeapon()
 {
     bEquipWeapon = !bEquipWeapon;
     
-    Super::SwapWeapon();
+    Super::AttachWeapon();
 }
 
 void ACombatCharacter::SetLockOn(AOWCharacter* Target)

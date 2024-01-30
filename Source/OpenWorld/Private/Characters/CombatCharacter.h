@@ -65,7 +65,7 @@ protected:
 
 	virtual void Attack() override;
 	virtual void EnableWeapon(bool bEnabled) override;
-	virtual void SwapWeapon() override;
+	virtual void AttachWeapon() override;
 	virtual void SetLockOn(AOWCharacter* Target) override;
 
 	// ===== UI ========== //

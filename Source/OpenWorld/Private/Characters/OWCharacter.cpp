@@ -197,17 +197,16 @@ void AOWCharacter::EnableWeapon(bool bEnabled)
 
 void AOWCharacter::AttachWeapon()
 {
+	ResetState();
+
 	if (!CarriedWeapon.IsValid()) return;
 
-	ResetState();
 	CarriedWeapon->EquipTo(bEquipWeapon);
 }
 
 void AOWCharacter::SwapWeapon()
 {
 	if (!bAllowSwapWeapon || !IsReady()) return;
-
-	CharacterState = ECharacterState::ECS_Action;
 
 	// Determine which section to play the montage
 	FName SectionName = bEquipWeapon ? TEXT("Equip") : TEXT("Unequip");

@@ -146,10 +146,10 @@ protected:
 
 	/** Changing which weapon to equip by attaching to the character's back or hand */
 	UFUNCTION(BlueprintCallable)
-	void AttachWeapon();
+	virtual void AttachWeapon();
 
 	/** About to change the weapon */
-	virtual void SwapWeapon();
+	void SwapWeapon();
 
 	// *** Attacking/Engaging *** //
 
