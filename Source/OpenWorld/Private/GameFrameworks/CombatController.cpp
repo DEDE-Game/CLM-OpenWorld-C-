@@ -147,6 +147,16 @@ void ACombatController::CheckRange()
 
     float Distance = (TargetLocation - CharacterLocation).Size();
 
+    // If character is not ready to attack yet
+    if (!CombatCharacter->IsReady())
+    {
+        GetWorldTimerManager().ClearTimer(EngageDelayHandle);
+        Engage();
+
+        return;
+    }
+
+    // Attacking
     if (Distance <= HitRange)
     {
         // Try to kick enemy that is on blocking
@@ -155,6 +165,7 @@ void ACombatController::CheckRange()
         if (bShouldAttack) CombatCharacter->Attack();
         else               CombatCharacter->StartKick();
     }
+    // Go to that target combat
     else
     {
         bDisableSense = false;
@@ -173,9 +184,16 @@ void ACombatController::Engage()
 {
     if (!CombatCharacter->TargetCombat.IsValid() || CombatCharacter->TargetCombat->IsDead())
     {
-        StartPatrolling();
+        // Check for nearest enemy first
+        CombatCharacter->LockNearest();
 
-        return;
+        // If nearest enemy is still not exists, start patrolling
+        if (!CombatCharacter->TargetCombat.IsValid())
+        {
+            StartPatrolling();
+
+            return;
+        }
     }
 
     // Reset

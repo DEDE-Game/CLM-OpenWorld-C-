@@ -205,7 +205,7 @@ void APlayerCharacter::Look(const FInputActionValue &InputValue)
 
 void APlayerCharacter::Move(const FInputActionValue &InputValue)
 {
-	if (!bCanMove) return;
+	if (!IsReady()) return;
 
 	MovementInput = InputValue.Get<FVector2D>();
 
@@ -264,19 +264,17 @@ void APlayerCharacter::Landed(const FHitResult &Hit)
 
 void APlayerCharacter::Block(const FInputActionValue& InputValue)
 {
-	if (!bEquipWeapon) return;
-
 	const bool Value = InputValue.Get<bool>();
 
 	ToggleBlock(Value);
 
 	// Make player lock at nearest enemy
-	if (Value) LockNearest();
+	if (Value && bEquipWeapon) LockNearest();
 }
 
 void APlayerCharacter::ChangeWeapon(const FInputActionValue& InputValue)
 {
-	if (GetCurrentMontage()) return;
+	if (!IsReady()) return;
 
 	float Value = InputValue.Get<float>();
 
@@ -290,7 +288,7 @@ void APlayerCharacter::Dodge()
 	if (!TargetCombat.IsValid() || MovementInput.Size() != 1.f) return;
 
 	// Reset Combat
-	ToggleMovement(true);
+	ResetState();
 	EnableWeapon(false);
 
 	// Play Montage
@@ -301,7 +299,8 @@ void APlayerCharacter::Dodge()
 
 void APlayerCharacter::StartChargeAttack()
 {
-	if (!bEquipWeapon || GetCurrentMontage() == Montages["Attacking"].Get()) return;
+	// If already attacking/on charge attack already
+	if (!bEquipWeapon || IsOnMontage("Attacking")) return;
 
 	DamageMultiplier += DamageMultiplierRate * GetWorld()->GetDeltaSeconds();
 
@@ -312,8 +311,6 @@ void APlayerCharacter::StartChargeAttack()
 
 void APlayerCharacter::OnChargeAttack()
 {
-	if (!Montages.Contains("Charge Attack")) return;
-
 	// Start timer to perform actual charge attack
 	GetWorldTimerManager().SetTimer(ChargeTimerHandle, this, &ThisClass::Attack, 1.5f);
 
@@ -350,7 +347,7 @@ void APlayerCharacter::Attack()
 
 void APlayerCharacter::PerformChargeAttack()
 {
-    bCanMove = false;
+    CharacterState = ECharacterState::ECS_Action;
     GetCharacterMovement()->StopMovementImmediately();
 
     FName ChargeAttackSection = *FString::Printf(TEXT("%sChargeAttack"), *CarriedWeapon->GetWeaponName());
@@ -396,6 +393,8 @@ void APlayerCharacter::OnLeaveTakedown(UPrimitiveComponent* OverlappedComponent,
 
 void APlayerCharacter::PerformTakedown()
 {
+	CharacterState = ECharacterState::ECS_Action;
+
 	LockNearest();
 	PlayAnimMontage(Montages["Takedown"].LoadSynchronous());
 

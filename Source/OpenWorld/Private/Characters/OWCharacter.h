@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Enums/CharacterState.h"
 #include "Enums/Team.h"
 #include "GameFramework/Character.h"
 #include "Interfaces/HitInterface.h"
@@ -59,16 +60,14 @@ protected:
 	UPROPERTY(EditAnywhere, Category=Locomotions)
 	float WalkSpeed = 200.f;
 
-	bool bCanMove = true;
-
 	void ToggleWalk(bool bToggled);
 	void ToggleSprint(bool bToggled);
 	void ToggleCrouch(bool bTogged);
 
 	UFUNCTION(BlueprintCallable)
-	FORCEINLINE void ToggleMovement(bool bToggled)
+	FORCEINLINE void ResetState()
 	{
-		bCanMove = bToggled;
+		CharacterState = ECharacterState::ECS_NoAction;
 	}
 
 	UFUNCTION(BlueprintCallable)
@@ -79,6 +78,8 @@ protected:
 
 	// ***===== Attributes ==========*** //
 
+	ECharacterState CharacterState = ECharacterState::ECS_NoAction;
+
 	UPROPERTY(EditAnywhere, Category=Attributes)
 	float MaxHealth = 100.f;
 
@@ -88,7 +89,7 @@ protected:
 	{
 		Health = FMath::Clamp(Health + Offset, 0.f, MaxHealth);
 
-		if (IsDead()) Die();
+		if (Health == 0.f) Die();
 	}
 
 	virtual void Die();
@@ -206,17 +207,23 @@ public:
 	{
 		return TargetCombat.Get();
 	}
+	FORCEINLINE const bool IsReady() const
+	{
+		return CharacterState == ECharacterState::ECS_NoAction;
+	}
 	FORCEINLINE const bool IsEquippingWeapon() const
 	{
 		return bEquipWeapon;
 	}
 	FORCEINLINE const bool IsDead() const
 	{
-		return Health == 0.f;
+		return CharacterState == ECharacterState::ECS_Died;
 	}
-	FORCEINLINE const bool IsOnBlocking() const
+	FORCEINLINE const bool IsOnMontage(const FName& MontageName)
 	{
-		return GetCurrentMontage() == Montages["Blocking"].Get();
+		if (!Montages.Contains(MontageName)) return false;
+
+		return GetCurrentMontage() ? GetCurrentMontage() == Montages[MontageName].Get() : false;
 	}
 	FORCEINLINE ETeam GetTeam() const 
 	{

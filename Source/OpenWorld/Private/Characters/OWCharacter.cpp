@@ -25,6 +25,7 @@ AOWCharacter::AOWCharacter()
 	/* General */
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 	GetCharacterMovement()->MaxAcceleration = 500.f;
+	GetCharacterMovement()->RotationRate = FRotator(0.f, 360.f, 0.f);
 	/* Walking */
 	GetCharacterMovement()->GroundFriction = 1.f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 100.f;
@@ -126,7 +127,9 @@ void AOWCharacter::MoveForward()
 
 void AOWCharacter::Die()
 {
-	if (!Montages.Contains("Die")) return;
+	if (IsDead()) return;
+
+	CharacterState = ECharacterState::ECS_Died;
 
 	// Make sure to remove anything left
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -160,13 +163,13 @@ const bool AOWCharacter::IsEnemy(AOWCharacter* Other) const
 
 void AOWCharacter::ToggleBlock(bool bToggled)
 {
-	if (!Montages.Contains("Blocking")) return;
+	if (!bEquipWeapon || !IsReady()) return;
 
 	if (bToggled) PlayAnimMontage(Montages["Blocking"].LoadSynchronous());
 	else		  StopAnimMontage(Montages["Blocking"].LoadSynchronous());
 
 	// Reset combat
-	ToggleMovement(true);
+	ResetState();
 	EnableWeapon(false);
 }
 
@@ -181,12 +184,15 @@ void AOWCharacter::AttachWeapon()
 {
 	if (!CarriedWeapon.IsValid()) return;
 
+	ResetState();
 	CarriedWeapon->EquipTo(bEquipWeapon);
 }
 
 void AOWCharacter::SwapWeapon()
 {
-	if (!bAllowSwapWeapon || !Montages.Contains("Equipping")) return;
+	if (!bAllowSwapWeapon || !IsReady()) return;
+
+	CharacterState = ECharacterState::ECS_Action;
 
 	// Determine which section to play the montage
 	FName SectionName = bEquipWeapon ? TEXT("Equip") : TEXT("Unequip");
@@ -271,7 +277,7 @@ void AOWCharacter::LockOn(float DeltaTime)
 
 void AOWCharacter::HitReaction(const FVector& ImpactPoint, bool bBlockable)
 {
-	if (!Montages.Contains("Blocking") || !Montages.Contains("Hit React")) return;
+	if (CharacterState == ECharacterState::ECS_Stunned) return;
 
 	// Get datas
 	FVector CurrentLocation = GetActorLocation();
@@ -283,8 +289,8 @@ void AOWCharacter::HitReaction(const FVector& ImpactPoint, bool bBlockable)
 	int32 RadAngle   = FMath::FloorToInt32(FMath::Acos(DotProduct));
 
 	// Check if the player succeed block/avoid the hit
-	bool bDodging    = Montages.Contains("Dodging") && GetCurrentMontage() ? GetCurrentMontage() == Montages["Dodging"].Get() : false;
-	bSucceedBlocking = bBlockable && GetCurrentMontage() == Montages["Blocking"].Get() && RadAngle == 0;
+	bool bDodging    = IsOnMontage("Dodging");
+	bSucceedBlocking = bBlockable && IsOnMontage("Blocking") && RadAngle == 0;
 	bSucceedBlocking = bSucceedBlocking || bDodging;
 
 	// Execute when the character is not dodging so the dodging animation montage won't be interupted
@@ -310,6 +316,7 @@ void AOWCharacter::StartKick()
 {
 	KickHitbox->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 
+	CharacterState = ECharacterState::ECS_Action;
 	PlayAnimMontage(Montages["Attacking"].LoadSynchronous(), 1.f, TEXT("Kicking"));
 }
 
@@ -337,9 +344,9 @@ void AOWCharacter::OnKick(UPrimitiveComponent* OverlappedComponent, AActor* Othe
 
 void AOWCharacter::Attack()
 {
-	if (!Montages.Contains("Attacking") || !bEquipWeapon || !bCanMove) return;
+	if (!bEquipWeapon || !IsReady()) return;
 
-	bCanMove = false;
+	CharacterState = ECharacterState::ECS_Action;
 	GetCharacterMovement()->StopMovementImmediately();
 
 	// Play montage depends on the carried weapon
@@ -362,13 +369,13 @@ void AOWCharacter::Attack()
 
 void AOWCharacter::OnWeaponHit(AOWCharacter* DamagingCharacter, const FVector& ImpactPoint, const float GivenDamage, bool bBlockable)
 {
-	if (!Montages.Contains("Hit React") || IsDead()) return;
+	if (IsDead()) return;
 
 	// Hit React
 	HitReaction(ImpactPoint, bBlockable);
 
 	// Reset combat
-	ToggleMovement(true);
+	ResetState();
 	EnableWeapon(false);
 
 	if (!bSucceedBlocking)
