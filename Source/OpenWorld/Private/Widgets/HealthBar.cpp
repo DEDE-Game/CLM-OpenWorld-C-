@@ -11,5 +11,10 @@ void UHealthBar::UpdateHealth(float Percentage)
 void UHealthBar::SetHealthColor(const FLinearColor& LinearColor)
 {
     HealthBar->SetFillColorAndOpacity(LinearColor);
-    HealthBar->WidgetStyle.BackgroundImage.OutlineSettings.Color = LinearColor;
+
+    // Set the outline settings
+    FProgressBarStyle CurrentStyle = HealthBar->GetWidgetStyle();
+    FProgressBarStyle NewStyle     = CurrentStyle;
+    NewStyle.BackgroundImage.OutlineSettings.Color = FSlateColor(LinearColor);
+    HealthBar->SetWidgetStyle(NewStyle);
 }

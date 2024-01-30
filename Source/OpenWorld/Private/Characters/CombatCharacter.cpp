@@ -1,9 +1,11 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Characters/CombatCharacter.h"
+#include "Characters/PlayerCharacter.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/WidgetComponent.h"
 #include "GameFrameworks/CombatController.h"
+#include "Kismet/GameplayStatics.h"
 #include "NavigationInvokerComponent.h"
 #include "Weapons/MeleeWeapon.h"
 #include "Widgets/HealthBar.h"
@@ -56,6 +58,11 @@ void ACombatCharacter::DefaultInitializer()
         TEXT("/Game/Game/Blueprints/Weapons/BP_Sword")
     );
     GivenWeaponClasses.Add(SwordAsset.Class);
+
+	static ConstructorHelpers::FObjectFinder<USoundBase> SlowSFXAsset(
+		TEXT("/Script/MetasoundEngine.MetaSoundSource'/Game/Game/Audio/Combats/MS_Slow.MS_Slow'")
+	);
+	SlowSFX = SlowSFXAsset.Object;
 }
 
 // ==================== Lifecycles ==================== //
@@ -87,6 +94,15 @@ void ACombatCharacter::Destroyed()
     if (EnemyController.IsValid()) EnemyController->Destroy();
 }
 
+// ==================== Attributes ==================== //
+
+void ACombatCharacter::Die()
+{
+    Super::Die();
+
+    HealthBarComponent->SetVisibility(false);
+}
+
 // ==================== Combat ==================== //
 
 void ACombatCharacter::RandomizeWeapon()
@@ -114,6 +130,27 @@ void ACombatCharacter::OnWeaponHit(AOWCharacter* DamagingCharacter, const FVecto
     HealthBar->UpdateHealth(Health / MaxHealth);
 }
 
+void ACombatCharacter::Attack()
+{
+    Super::Attack();
+
+    // Slow down the time to give player a chance to dodge/block
+    if (TargetCombat.IsValid() && TargetCombat->GetClass()->IsChildOf(APlayerCharacter::StaticClass()))
+    {
+        UGameplayStatics::PlaySound2D(this, SlowSFX.LoadSynchronous());
+        UGameplayStatics::SetGlobalTimeDilation(this, .5f);
+    }
+}
+
+void ACombatCharacter::EnableWeapon(bool bEnabled)
+{
+    Super::EnableWeapon(bEnabled);
+
+    // After attacking, set back the time to normal
+    if (TargetCombat.IsValid() && TargetCombat->GetClass()->IsChildOf(APlayerCharacter::StaticClass()))
+        UGameplayStatics::SetGlobalTimeDilation(this, 1.f);
+}
+
 void ACombatCharacter::SwapWeapon()
 {
     bEquipWeapon = !bEquipWeapon;
@@ -127,11 +164,4 @@ void ACombatCharacter::SetLockOn(AOWCharacter* Target)
 
     if (!Target) return;
     EnemyController->MoveToLocation(Target->GetActorLocation(), 250.f, false);
-}
-
-void ACombatCharacter::Die()
-{
-    Super::Die();
-
-    HealthBarComponent->SetVisibility(false);
 }

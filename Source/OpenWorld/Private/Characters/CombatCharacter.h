@@ -8,8 +8,10 @@
 
 class ACombatController;
 class AMeleeWeapon;
+class APlayerCharacter;
 class UHealthBar;
 class UNavigationInvokerComponent;
+class USoundBase;
 class UWidgetComponent;
 
 UCLASS()
@@ -50,6 +52,10 @@ protected:
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UNavigationInvokerComponent> NavInvoker;	
 
+	// ===== Attributes ========== //
+
+	virtual void Die() override;
+
 	// ===== Combat ========== //
 
 	UPROPERTY(EditAnywhere, Category=Combat)
@@ -57,15 +63,21 @@ protected:
 
 	void RandomizeWeapon();
 
+	virtual void Attack() override;
+	virtual void EnableWeapon(bool bEnabled) override;
 	virtual void SwapWeapon() override;
 	virtual void SetLockOn(AOWCharacter* Target) override;
-	virtual void Die() override;
 
 	// ===== UI ========== //
 
 	/** The actual health bar */
 	UPROPERTY()
 	TWeakObjectPtr<UHealthBar> HealthBar;
+
+	// ===== Audio ========== //
+
+	UPROPERTY(EditDefaultsOnly, Category=Audio)
+	TSoftObjectPtr<USoundBase> SlowSFX;
 
 private:
 	void DefaultInitializer();

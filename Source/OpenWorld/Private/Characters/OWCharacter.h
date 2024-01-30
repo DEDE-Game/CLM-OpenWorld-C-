@@ -129,7 +129,7 @@ protected:
 	void ToggleBlock(bool bToggled);
 
 	UFUNCTION(BlueprintCallable)
-	void EnableWeapon(bool bEnabled);
+	virtual void EnableWeapon(bool bEnabled);
 
 	/** Changing which weapon to equip by attaching to the character's back or hand */
 	UFUNCTION(BlueprintCallable)

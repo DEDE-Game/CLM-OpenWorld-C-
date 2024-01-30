@@ -147,7 +147,7 @@ void ACombatController::CheckRange()
 
     float Distance = (TargetLocation - CharacterLocation).Size();
 
-    if   (Distance <= HitRange)
+    if (Distance <= HitRange)
     {
         // Try to kick enemy that is on blocking
         bool bShouldAttack = CombatCharacter->TargetCombat->IsBlocking() ? FMath::RandBool() : true;
