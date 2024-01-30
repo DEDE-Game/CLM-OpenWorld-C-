@@ -172,7 +172,8 @@ void AMeleeWeapon::ApplyDamage(FHitResult &TraceResult)
 			FVector::ZeroVector,
 			FRotator::ZeroRotator,
 			EAttachLocation::KeepRelativeOffset,
-			true);
+			true
+		);
 		BloodTrailComponent->Activate();
 		BloodTrailComponent->SetVariableObject(TEXT("User.ObjCollisionCallback"), this);
 	}

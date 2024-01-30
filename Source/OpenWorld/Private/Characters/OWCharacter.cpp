@@ -282,17 +282,23 @@ void AOWCharacter::HitReaction(const FVector& ImpactPoint, bool bBlockable)
 	float DotProduct = FVector::DotProduct(Forward, HitDirection);
 	int32 RadAngle   = FMath::FloorToInt32(FMath::Acos(DotProduct));
 
-	// Check if the player succeed block the hit
+	// Check if the player succeed block/avoid the hit
+	bool bDodging    = Montages.Contains("Dodging") && GetCurrentMontage() ? GetCurrentMontage() == Montages["Dodging"].Get() : false;
 	bSucceedBlocking = bBlockable && GetCurrentMontage() == Montages["Blocking"].Get() && RadAngle == 0;
+	bSucceedBlocking = bSucceedBlocking || bDodging;
 
-	// Animation Montage (Depends on succeed blocking or no)
-	FName MontageToPlay  = bSucceedBlocking ? TEXT("Blocking") : TEXT("Hit React");
-	FName MontageSection = bSucceedBlocking ? TEXT("Blocking") : *FString::Printf(TEXT("From%d"), RadAngle);
-	PlayAnimMontage(Montages[MontageToPlay].LoadSynchronous(), 1.f, MontageSection);
+	// Execute when the character is not dodging so the dodging animation montage won't be interupted
+	if (!bDodging)
+	{
+		// Animation Montage (Depends on succeed blocking or no)
+		FName MontageToPlay  = bSucceedBlocking ? TEXT("Blocking") : TEXT("Hit React");
+		FName MontageSection = bSucceedBlocking ? TEXT("Blocking") : *FString::Printf(TEXT("From%d"), RadAngle);
+		PlayAnimMontage(Montages[MontageToPlay].LoadSynchronous(), 1.f, MontageSection);
 
-	// Knock back
-	float KnockbackPower = bSucceedBlocking ? 200.f : 400.f;
-	GetCharacterMovement()->AddImpulse(-HitDirection * KnockbackPower, true);
+		// Knock back
+		float KnockbackPower = bSucceedBlocking ? 200.f : 400.f;
+		GetCharacterMovement()->AddImpulse(-HitDirection * KnockbackPower, true);
+	}
 }
 
 void AOWCharacter::ComboOver()
