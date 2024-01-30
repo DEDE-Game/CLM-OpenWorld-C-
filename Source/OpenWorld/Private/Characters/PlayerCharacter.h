@@ -15,6 +15,7 @@ class UCameraComponent;
 class UInputAction;
 class UInventoryComponent;
 class USpringArmComponent;
+class UTimelineComponent;
 
 UCLASS()
 class APlayerCharacter : public AOWCharacter
@@ -24,7 +25,7 @@ class APlayerCharacter : public AOWCharacter
 public:
 	APlayerCharacter();
 
-	// ===== Lifecycles ========== //
+	// ***===== Lifecycles ==========*** //
 
 #if WITH_EDITOR
 	virtual void OnConstruction(const FTransform& Transform) override;
@@ -33,22 +34,23 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent *PlayerInputComponent) override;
 	virtual void Tick(float DeltaTime) override;
 
-	// ===== Combat ========== //
+	// ***===== Combat ==========*** //
 
 	virtual void DeactivateAction() override;
+	virtual void OnWeaponHit(AOWCharacter* DamagingCharacter, const FVector& ImpactPoint, const float GivenDamage, bool bBlockable) override;
 
-	// ===== UI ========== //
+	// ***===== UI ==========*** //
 
 	void ShowTip(const FString& Text);
 	void HideTip();
 
 protected:
 
-	// ===== Lifecycles ========== //
+	// ***===== Lifecycles ==========*** //
 
 	virtual void BeginPlay() override;
 
-	// ===== Combat ========== //
+	// ***===== Combat ==========*** //
 
 	virtual void OnLostInterest() override;
 
@@ -56,7 +58,7 @@ private:
 	void DefaultInitializer();
 	void ReferencesInitializer();
 
-	// ===== Components ========== //
+	// ***===== Components ==========*** //
 
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<USpringArmComponent> SpringArm;
@@ -70,7 +72,10 @@ private:
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UInventoryComponent> Inventory;
 
-	// ===== References ========== //
+	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<UTimelineComponent> ParryTimeline;
+
+	// ***===== References ==========*** //
 
 	UPROPERTY(EditAnywhere, Category=Materials)
 	TSoftObjectPtr<UMaterialParameterCollection> GlobalMatParam;
@@ -84,7 +89,7 @@ private:
 	UPROPERTY()
 	TWeakObjectPtr<AOWHUD> OWHUD;
 
-	// ===== Input ========== //
+	// ***===== Input ==========*** //
 
 	UPROPERTY(EditDefaultsOnly, Category = Input)
 	TSoftObjectPtr<UInputAction> LookAction;
@@ -122,7 +127,7 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category=Input)
 	TSoftObjectPtr<UInputAction> KickAction;
 
-	// ===== Locomotions ========== //
+	// ***===== Locomotions ==========*** //
 
 	FVector2D MovementInput;
 
@@ -136,7 +141,7 @@ private:
 
 	virtual void Landed(const FHitResult &Hit) override;
 
-	// ===== Combat ========== //
+	// ***===== Combat ==========*** //
 
 	FORCEINLINE void Block(const FInputActionValue& InputValue);
 	FORCEINLINE void ChangeWeapon(const FInputActionValue& InputValue);
@@ -145,7 +150,7 @@ private:
 
 	virtual void Attack() override;
 
-	/**== CHARGING ATTACK ==**/
+	// *** CHARGING ATTACK *** //
 
 	UPROPERTY(EditAnywhere, Category = Combat)
 	float DamageMultiplierRate = .8f;
@@ -162,7 +167,7 @@ private:
 	void OnChargeAttack();
 	void PerformChargeAttack();
 
-	// ===== Takedown ========== //
+	// ***===== Takedown ==========*** //
 
 	UPROPERTY()
 	TWeakObjectPtr<AOWCharacter> TargetTakedown;
@@ -175,9 +180,34 @@ private:
 
 	void PerformTakedown();
 
-	// ===== Environments ========== //
+	// ***===== Parry ==========*** //
 
-	/**=== Foliages ===**/
+	/** Will stunt the enemy if parry is succeed */
+	FTimerHandle ParryTimerHandle;
+	float ParryTimer = 1.2f;
+
+	/** Slow down effect with timeline */
+	UPROPERTY(EditAnywhere, Category=Parry)
+	TSoftObjectPtr<UCurveFloat> ParryCurve;
+
+	/** Will be checked on the OnWeaponHit event 
+	 * @see OnWeaponHit
+	 */
+	FORCEINLINE const bool IsParrySucceed() const
+	{
+		return bSucceedBlocking && GetWorldTimerManager().IsTimerActive(ParryTimerHandle);
+	}
+	
+	/** If succeed, the player will stunt the enemy */
+	FORCEINLINE void Parry(AOWCharacter* DamagingCharacter);
+
+	/** Update slow down effect */
+	UFUNCTION()
+	void ParrySlowdown(float Value);
+
+	// ***===== Environments ==========*** //
+
+	// *** Foliages *** //
 
 	/** Delay foliage bending effect */
 	FVector LastLocation1;
@@ -186,7 +216,7 @@ private:
 	/** Make nearby character's foliage bending */
 	void AffectsFoliage();
 
-	/**=== Game Objects ===**/
+	// *** Game Objects *** //
 
 	UPROPERTY()
 	TWeakObjectPtr<AMeleeWeapon> OverlappingWeapon;
@@ -194,7 +224,7 @@ private:
 	void Interact();
 
 public:
-	// ===== Modifiers ========== //
+	// ***===== Modifiers ==========*** //
 
 	FORCEINLINE void SetOverlappingWeapon(TWeakObjectPtr<AMeleeWeapon> Weapon)
 	{

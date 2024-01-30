@@ -152,6 +152,21 @@ void AOWCharacter::Die()
 	}, 1.f, false);
 }
 
+void AOWCharacter::Stunned()
+{
+	PlayAnimMontage(Montages["Stunned"].LoadSynchronous());
+	GetCharacterMovement()->StopMovementImmediately();
+
+	// Un stunned after certain time
+	GetWorldTimerManager().SetTimer(StunTimerHandle, this, &ThisClass::FinishedStunned, 4.5f);
+}
+
+void AOWCharacter::FinishedStunned()
+{
+	ResetState();
+	StopAnimMontage(Montages["Stunned"].Get());
+}
+
 // ==================== Combat ==================== //
 
 const bool AOWCharacter::IsEnemy(AOWCharacter* Other) const 
@@ -277,7 +292,7 @@ void AOWCharacter::LockOn(float DeltaTime)
 
 void AOWCharacter::HitReaction(const FVector& ImpactPoint, bool bBlockable)
 {
-	if (CharacterState == ECharacterState::ECS_Stunned) return;
+	if (IsOnMontage("Stunned")) return;
 
 	// Get datas
 	FVector CurrentLocation = GetActorLocation();

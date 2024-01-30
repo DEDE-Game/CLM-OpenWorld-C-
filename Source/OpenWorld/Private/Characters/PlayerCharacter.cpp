@@ -5,15 +5,16 @@
 #include "Components/BoxComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/InventoryComponent.h"
+#include "Components/TimelineComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFrameworks/OWPlayerController.h"
 #include "GameFrameworks/OWHUD.h"
 #include "EnhancedInputComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "Materials/MaterialParameterCollectionInstance.h"
 #include "Materials/MaterialParameterCollection.h"
 #include "Weapons/MeleeWeapon.h"
-#include "PlayerCharacter.h"
 
 APlayerCharacter::APlayerCharacter()
 {
@@ -35,6 +36,9 @@ APlayerCharacter::APlayerCharacter()
 
 	// Inventory
 	Inventory = CreateDefaultSubobject<UInventoryComponent>(TEXT("Inventory"));
+
+	// Parry Timeline
+	ParryTimeline = CreateDefaultSubobject<UTimelineComponent>(TEXT("Timeline Component"));
 
 	// ...
 	Team = ETeam::T_Friend;
@@ -107,6 +111,11 @@ void APlayerCharacter::DefaultInitializer()
 		TEXT("/Script/Engine.MaterialParameterCollection'/Game/Game/Materials/MP_Global.MP_Global'")
 	);
 	GlobalMatParam = GlobalParamAsset.Object;
+
+	static ConstructorHelpers::FObjectFinder<UCurveFloat> ParryCurveAsset(
+		TEXT("/Script/Engine.CurveFloat'/Game/Game/Curves/C_ParryCurve.C_ParryCurve'")
+	);
+	ParryCurve = ParryCurveAsset.Object;
 }
 
 void APlayerCharacter::ReferencesInitializer()
@@ -135,6 +144,14 @@ void APlayerCharacter::BeginPlay()
 	// Events
 	TakedownArea->OnComponentBeginOverlap.AddDynamic(this, &ThisClass::OnEnterTakedown);
 	TakedownArea->OnComponentEndOverlap  .AddDynamic(this, &ThisClass::OnLeaveTakedown);
+
+	// Parry Timeline
+	FOnTimelineFloatStatic ParryTimelineUpdate;
+	ParryTimelineUpdate.BindUFunction(this, TEXT("ParrySlowdown"));
+
+	ParryTimeline->AddInterpFloat(ParryCurve.LoadSynchronous(), ParryTimelineUpdate);
+	ParryTimeline->SetLooping(false);
+	ParryTimeline->SetTimelineLength(1.f);
 }
 
 void APlayerCharacter::PossessedBy(AController* NewController)
@@ -268,6 +285,9 @@ void APlayerCharacter::Block(const FInputActionValue& InputValue)
 
 	ToggleBlock(Value);
 
+	// Start parry timer
+	GetWorldTimerManager().SetTimer(ParryTimerHandle, ParryTimer, false);
+
 	// Make player lock at nearest enemy
 	if (Value && bEquipWeapon) LockNearest();
 }
@@ -369,6 +389,29 @@ void APlayerCharacter::OnLostInterest()
 {
 	// Re-enable the takedown
 	TakedownArea->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+}
+
+void APlayerCharacter::OnWeaponHit(AOWCharacter* DamagingCharacter, const FVector& ImpactPoint, const float GivenDamage, bool bBlockable)
+{
+	Super::OnWeaponHit(DamagingCharacter, ImpactPoint, GivenDamage, bBlockable);
+
+	// Perform parry here
+	if (bBlockable && IsParrySucceed())
+		Parry(DamagingCharacter);
+}
+
+// ==================== Parry ==================== //
+
+void APlayerCharacter::Parry(AOWCharacter* DamagingCharacter)
+{
+	ParryTimeline    ->PlayFromStart();
+	DamagingCharacter->Stunned();
+}
+
+void APlayerCharacter::ParrySlowdown(float Value)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Parry Slowdown: %f"), Value);
+	UGameplayStatics::SetGlobalTimeDilation(this, Value);
 }
 
 // ==================== Takedown ==================== //

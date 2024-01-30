@@ -25,6 +25,10 @@ public:
 
 	virtual void Tick(float DeltaTime) override;
 
+	// ***===== Attributes ==========*** //
+	
+	void Stunned();
+
 	// ***===== Combat ==========*** //
 
 	//~ Begin IHitInterface
@@ -80,6 +84,8 @@ protected:
 
 	ECharacterState CharacterState = ECharacterState::ECS_NoAction;
 
+	// *** Health Related *** //
+
 	UPROPERTY(EditAnywhere, Category=Attributes)
 	float MaxHealth = 100.f;
 
@@ -93,6 +99,12 @@ protected:
 	}
 
 	virtual void Die();
+	
+	// *** Stunned *** //
+
+	FTimerHandle StunTimerHandle;
+	
+	void FinishedStunned();
 
 	// ***===== Combat ==========*** //
 

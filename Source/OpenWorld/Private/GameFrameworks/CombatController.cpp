@@ -105,7 +105,13 @@ void ACombatController::OnTargetSense(AActor* Actor, FAIStimulus Stimulus)
     AOWCharacter* Other = Cast<AOWCharacter>(Actor);
 
     // If already have target...
-    if (bDisableSense || !Other || !CombatCharacter->IsEnemy(Other) || GetWorldTimerManager().IsTimerActive(ReactionDelay)) return;
+    bool bCantSense = bDisableSense || // OR
+                      CombatCharacter->IsOnMontage("Stunned") || // OR
+                      !Other        || // OR
+                      !CombatCharacter->IsEnemy(Other) || // OR
+                      GetWorldTimerManager().IsTimerActive(ReactionDelay);
+
+    if (bCantSense) return;
 
     // Using weapon
     if (!CombatCharacter->bEquipWeapon) CombatCharacter->SwapWeapon();
@@ -182,6 +188,19 @@ void ACombatController::FinishedReaction()
 
 void ACombatController::Engage()
 {
+    // Reset
+    CombatCharacter->ToggleWalk(false);
+    bStrafing     = false;
+    bDisableSense = true;
+    GetWorldTimerManager().ClearTimer(PatrollingDelayHandler);
+
+    // Randomize next decision
+    float NextDecisionTimer = FMath::RandRange(EngageDelayMin, EngageDelayMax);
+    GetWorldTimerManager().SetTimer(EngageDelayHandle, this, &ThisClass::Engage, NextDecisionTimer);
+
+    // If stunned, do none
+    if (CombatCharacter->IsOnMontage("Stunned")) return;
+
     if (!CombatCharacter->TargetCombat.IsValid() || CombatCharacter->TargetCombat->IsDead())
     {
         // Check for nearest enemy first
@@ -196,15 +215,10 @@ void ACombatController::Engage()
         }
     }
 
-    // Reset
-    CombatCharacter->ToggleWalk(false);
-    bStrafing     = false;
-    bDisableSense = true;
-
     // Get the decision randomly, but we can adjust the aggresivly
     int8 Decision = FMath::RandRange(0, EngagingChances.Num() - 1);
     Decision = EngagingChances[Decision];
-
+    UE_LOG(LogTemp, Warning, TEXT("Engage: %s"), Decision == 0 ? TEXT("Attack") : Decision == 1 ? TEXT("Strafing") : TEXT("Blocking"));
     switch (Decision)
     {
     // Attacking
@@ -237,10 +251,6 @@ void ACombatController::Engage()
         CheckRange();
         break;
     }
-
-    // Randomize next decision
-    float NextDecisionTimer = FMath::RandRange(EngageDelayMin, EngageDelayMax);
-    GetWorldTimerManager().SetTimer(EngageDelayHandle, this, &ThisClass::Engage, NextDecisionTimer);
 }
 
 void ACombatController::Strafing()
