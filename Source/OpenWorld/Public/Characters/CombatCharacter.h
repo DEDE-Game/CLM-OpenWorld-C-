@@ -15,7 +15,7 @@ class USoundBase;
 class UWidgetComponent;
 
 UCLASS()
-class ACombatCharacter : public AOWCharacter
+class OPENWORLD_API ACombatCharacter : public AOWCharacter
 {
 	GENERATED_BODY()
 
@@ -47,10 +47,13 @@ protected:
 	// ===== Components ========== //
 
 	UPROPERTY(VisibleAnywhere)
-	TObjectPtr<UWidgetComponent> HealthBarComponent;
+	TObjectPtr<UWidgetComponent> HealthBar;
 
 	UPROPERTY(VisibleAnywhere)
-	TObjectPtr<UNavigationInvokerComponent> NavInvoker;	
+	TObjectPtr<UWidgetComponent> AttackIndicator;
+
+	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<UNavigationInvokerComponent> NavInvoker;
 
 	// ===== Attributes ========== //
 
@@ -58,21 +61,22 @@ protected:
 
 	// ===== Combat ========== //
 
-	UPROPERTY(EditAnywhere, Category=Combat)
+	UPROPERTY(EditAnywhere, Category = Combat)
 	TArray<TSubclassOf<AMeleeWeapon>> GivenWeaponClasses;
 
 	void RandomizeWeapon();
 
-	virtual void Attack() override;
+	virtual void AttackCombo() override;
+	virtual void StartChargeAttack() override;
 	virtual void EnableWeapon(bool bEnabled) override;
 	virtual void AttachWeapon() override;
-	virtual void SetLockOn(AOWCharacter* Target) override;
+	virtual void SetLockOn(AOWCharacter *Target) override;
 
 	// ===== UI ========== //
 
 	/** The actual health bar */
 	UPROPERTY()
-	TWeakObjectPtr<UHealthBar> HealthBar;
+	TWeakObjectPtr<UHealthBar> HealthBarWidget;
 
 	// ===== Audio ========== //
 
@@ -81,4 +85,5 @@ protected:
 
 private:
 	void DefaultInitializer();
+	void InitializeUI();
 };

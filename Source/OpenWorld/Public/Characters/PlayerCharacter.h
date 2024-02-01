@@ -18,7 +18,7 @@ class USpringArmComponent;
 class UTimelineComponent;
 
 UCLASS()
-class APlayerCharacter : public AOWCharacter
+class OPENWORLD_API APlayerCharacter : public AOWCharacter
 {
 	GENERATED_BODY()
 
@@ -41,8 +41,8 @@ public:
 
 	// ***===== UI ==========*** //
 
-	void ShowTip(const FString& Text);
-	void HideTip();
+	FORCEINLINE void ShowTip(const FString& Text);
+	FORCEINLINE void HideTip();
 
 protected:
 
@@ -131,15 +131,15 @@ private:
 
 	FVector2D MovementInput;
 
-	void Look(const FInputActionValue &InputValue);
-	void Move(const FInputActionValue &InputValue);
-	void DoJump();
+	void Move(const FInputActionValue& InputValue);
 	
-	FORCEINLINE void Sprint(const FInputActionValue &InputValue);
-	FORCEINLINE void Walk(const FInputActionValue &InputValue);
+	FORCEINLINE void DoJump();
+	FORCEINLINE void Look(const FInputActionValue& InputValue);
+	FORCEINLINE void Sprint(const FInputActionValue& InputValue);
+	FORCEINLINE void Walk(const FInputActionValue& InputValue);
 	FORCEINLINE void DoCrouch(const FInputActionValue& InputValue);
 
-	virtual void Landed(const FHitResult &Hit) override;
+	virtual void Landed(const FHitResult& Hit) override;
 
 	// ***===== Combat ==========*** //
 
@@ -149,23 +149,6 @@ private:
 	void Dodge();
 
 	virtual void Attack() override;
-
-	// *** CHARGING ATTACK *** //
-
-	UPROPERTY(EditAnywhere, Category = Combat)
-	float DamageMultiplierRate = .8f;
-
-	float DamageMultiplier = 1.f;
-
-	/** Once the time is passed, will use charge attack instead */
-	FTimerHandle ChargeTimerHandle;
-	float ChargeAfter = .3f;
-
-	bool bCharging = false;
-
-	void StartChargeAttack();
-	void OnChargeAttack();
-	void PerformChargeAttack();
 
 	// ***===== Takedown ==========*** //
 
@@ -202,8 +185,7 @@ private:
 	FORCEINLINE void Parry(AOWCharacter* DamagingCharacter);
 
 	/** Update slow down effect */
-	UFUNCTION()
-	void ParrySlowdown(float Value);
+	FORCEINLINE void ParrySlowdown(float Value);
 
 	// ***===== Environments ==========*** //
 
@@ -221,7 +203,7 @@ private:
 	UPROPERTY()
 	TWeakObjectPtr<AMeleeWeapon> OverlappingWeapon;
 
-	void Interact();
+	FORCEINLINE void Interact();
 
 public:
 	// ***===== Modifiers ==========*** //

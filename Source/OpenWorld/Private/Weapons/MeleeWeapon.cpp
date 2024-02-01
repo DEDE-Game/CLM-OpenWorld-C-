@@ -19,6 +19,7 @@ AMeleeWeapon::AMeleeWeapon()
 	BaseMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Base Mesh"));
 	BaseMesh->SetMobility(EComponentMobility::Movable);
 	BaseMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	BaseMesh->SetCastShadow(false);
 
 	SetRootComponent(BaseMesh);
 

@@ -10,7 +10,7 @@
  * Placing humanoid references along the world 
  */
 UCLASS()
-class AHumanoidReference : public AActor
+class OPENWORLD_API AHumanoidReference : public AActor
 {
 	GENERATED_BODY()
 	

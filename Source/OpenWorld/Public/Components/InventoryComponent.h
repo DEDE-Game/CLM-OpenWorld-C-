@@ -10,7 +10,7 @@ class AMeleeWeapon;
 class APlayerCharacter;
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
-class UInventoryComponent : public UActorComponent
+class OPENWORLD_API UInventoryComponent : public UActorComponent
 {
 	GENERATED_BODY()
 
@@ -49,7 +49,7 @@ private:
 	int8 LastWeapon    = CurrentWeapon;
 	
 	UPROPERTY(EditAnywhere, Category=Weaponary)
-	int8 WeaponMaxSlot = 5;
+	int8 WeaponMaxSlot = 2;
 
 	// *** Unequip Weapon *** //
 

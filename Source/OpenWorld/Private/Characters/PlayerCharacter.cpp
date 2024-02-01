@@ -147,7 +147,7 @@ void APlayerCharacter::BeginPlay()
 
 	// Parry Timeline
 	FOnTimelineFloatStatic ParryTimelineUpdate;
-	ParryTimelineUpdate.BindUFunction(this, TEXT("ParrySlowdown"));
+	ParryTimelineUpdate.BindUObject(this, &ThisClass::ParrySlowdown);
 
 	ParryTimeline->AddInterpFloat(ParryCurve.LoadSynchronous(), ParryTimelineUpdate);
 	ParryTimeline->SetLooping(false);
@@ -305,78 +305,31 @@ void APlayerCharacter::ChangeWeapon(const FInputActionValue& InputValue)
 void APlayerCharacter::Dodge()
 {
 	// We're only able to dodge in combat and also with WASD key for directional dodge
-	if (!TargetCombat.IsValid() || MovementInput.Size() != 1.f) return;
+	if (!TargetCombat.IsValid()) return;
 
 	// Reset Combat
 	ResetState();
 	EnableWeapon(false);
 
 	// Play Montage
-	FName SectionName = *FString::Printf(TEXT("%d%d"), FMath::FloorToInt32(MovementInput.X), FMath::FloorToInt32(MovementInput.Y));
+	FName SectionName = MovementInput.Size() != 1.f ? TEXT("0-1") :
+						*FString::Printf(TEXT("%d%d"), FMath::FloorToInt32(MovementInput.X), FMath::FloorToInt32(MovementInput.Y));
 
 	PlayAnimMontage(Montages["Dodging"].LoadSynchronous(), 1.f, SectionName);
 }
 
-void APlayerCharacter::StartChargeAttack()
-{
-	// If already attacking/on charge attack already
-	if (!bEquipWeapon || IsOnMontage("Attacking")) return;
-
-	DamageMultiplier += DamageMultiplierRate * GetWorld()->GetDeltaSeconds();
-
-	// Start timer for the first time
-	if (!GetWorldTimerManager().IsTimerActive(ChargeTimerHandle) && !bCharging)
-		 GetWorldTimerManager().SetTimer(ChargeTimerHandle, this, &ThisClass::OnChargeAttack, ChargeAfter);
-}
-
-void APlayerCharacter::OnChargeAttack()
-{
-	// Start timer to perform actual charge attack
-	GetWorldTimerManager().SetTimer(ChargeTimerHandle, this, &ThisClass::Attack, 1.5f);
-
-	// ...
-	bCharging = true;
-
-	LockNearest();
-	PlayAnimMontage(Montages["Charge Attack"].LoadSynchronous());
-}
-
 void APlayerCharacter::Attack()
 {
-	if (!bEquipWeapon) return;
-
 	// Takedown
 	if (TargetTakedown.IsValid())
 		PerformTakedown();
-	// Charge Attack
-	else if (bCharging)
-        PerformChargeAttack();
-	// Ordinary attack
+	// // Charge Attack
 	else 
 	{
 		LockNearest();
 
 		Super::Attack();
 	}
-
-	// Reset
-	DamageMultiplier = 1.f;
-	bCharging        = false;
-	GetWorldTimerManager().ClearTimer(ChargeTimerHandle);
-}
-
-void APlayerCharacter::PerformChargeAttack()
-{
-    CharacterState = ECharacterState::ECS_Action;
-    GetCharacterMovement()->StopMovementImmediately();
-
-    FName ChargeAttackSection = *FString::Printf(TEXT("%sChargeAttack"), *CarriedWeapon->GetWeaponName());
-    PlayAnimMontage(Montages["Attacking"].LoadSynchronous(), 1.f, ChargeAttackSection);
-
-    CarriedWeapon->SetTempDamage(
-        CarriedWeapon->GetDamage() * DamageMultiplier,
-		false
-	);
 }
 
 void APlayerCharacter::DeactivateAction()
@@ -417,6 +370,8 @@ void APlayerCharacter::ParrySlowdown(float Value)
 
 void APlayerCharacter::OnEnterTakedown(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
+	if (!bEquipWeapon) return;
+
 	AOWCharacter* Other = Cast<AOWCharacter>(OtherActor);
 
 	if (Other && IsEnemy(Other) && OWHUD.IsValid())
@@ -428,6 +383,8 @@ void APlayerCharacter::OnEnterTakedown(UPrimitiveComponent* OverlappedComponent,
 
 void APlayerCharacter::OnLeaveTakedown(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
+	if (!bEquipWeapon) return;
+
 	TargetTakedown = nullptr;
 
 	if (OWHUD.IsValid()) HideTip();

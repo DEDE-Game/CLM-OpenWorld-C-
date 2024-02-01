@@ -13,7 +13,7 @@ class UNiagaraSystem;
 class UTimelineComponent;
 
 UCLASS()
-class ARainThunder : public AActor
+class OPENWORLD_API ARainThunder : public AActor
 {
 	GENERATED_BODY()
 	
@@ -106,7 +106,7 @@ private:
 	float ThunderTimerMax = 10.f;
 
 	void SetupThunder();
-	void UpdateThunderTimeline(float Value);
+	FORCEINLINE void UpdateThunderTimeline(float Value);
 
 	/** Make the thunder always facing to player */
 	void Relocate();
@@ -117,5 +117,5 @@ private:
 public:
 	// ===== Modifiers ========== //
 
-	void SetGlobalMatParamIns(UMaterialParameterCollectionInstance* InGlobalParam);
+	FORCEINLINE void SetGlobalMatParamIns(UMaterialParameterCollectionInstance* InGlobalParam);
 };

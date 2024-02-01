@@ -9,7 +9,7 @@
 class ACombatCharacter;
 
 UCLASS()
-class ACombatController : public AAIController
+class OPENWORLD_API ACombatController : public AAIController
 {
 	GENERATED_BODY()
 
@@ -22,7 +22,7 @@ public:
 
 	// ***===== AI ==========*** //
 
-	void ActivateReaction();
+	FORCEINLINE void ActivateReaction();
 
 	virtual void OnMoveCompleted(FAIRequestID RequestID, const FPathFollowingResult& Result) override;
 
@@ -48,32 +48,33 @@ private:
 	UFUNCTION()
 	virtual void OnTargetSense(AActor* Actor, FAIStimulus Stimulus);
 
-	// *** Decision *** //
-    // Get the decision randomly, but we can adjust the aggresivly
+	// *** Engaging *** //
+    // Get the Engaging randomly, but we can adjust the aggresivly
     /**
      * 0: Attack
      * 1: Strafing
 	 * 2: Blocking
+	 * 3: Charge Attack
      */
-	UPROPERTY(EditAnywhere, Category=Combat)
-	TArray<int8> DecisionChances = { 0, 0, 0, 0, 0, 1, 1, 1, 2 };
+	UPROPERTY(EditAnywhere, Category=AI)
+	TArray<int8> EngageChances = { 0, 0, 0, 0, 1, 1, 2, 3 };
 
 	/** Whether decide to strafe or attack */
-	FTimerHandle DecisionDelayHandle;
+	FTimerHandle EngageDelayHandle;
 
-	UPROPERTY(EditAnywhere, Category=Combat)
-	float DecisionDelayMin = .7f;
+	UPROPERTY(EditAnywhere, Category=AI)
+	float EngageDelayMin = .7f;
 
-	UPROPERTY(EditAnywhere, Category=Combat)
-	float DecisionDelayMax = 3.5f;
+	UPROPERTY(EditAnywhere, Category=AI)
+	float EngageDelayMax = 3.5f;
 
-	void Decide();
+    void Blocking();
 
-	FORCEINLINE void ReDecide()
-	{
-		GetWorldTimerManager().ClearTimer(DecisionDelayHandle);
-		Decide();
-	}
+    FORCEINLINE void ReEngage()
+    {
+        GetWorldTimerManager().ClearTimer(EngageDelayHandle);
+		Engage();
+    }
 
     // *** Reactions *** //
     FTimerHandle ReactionDelay;
@@ -95,7 +96,7 @@ private:
 	
 	// *** Attacking *** //
 	UPROPERTY(EditAnywhere, Category=Combat)
-	float HitRange = 300.f;
+	float HitRange = 250.f;
 
 	void Attacking();
 
@@ -105,10 +106,14 @@ private:
 	float StrafeDirectionX;
 	float StrafeDirectionY;
 
+    FORCEINLINE void StartStrafing();
+
 	/** Strafing around player when on combat mode */
 	void Strafing();
 
 	// *** Blocking *** //
 	/** Disable blocking after certain time */
 	FTimerHandle BlockingTimerHandle;
+
+	void Engage();
 };

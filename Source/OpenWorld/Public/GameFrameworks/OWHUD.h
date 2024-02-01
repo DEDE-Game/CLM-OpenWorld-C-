@@ -9,7 +9,7 @@
 class UTipWidget;
 
 UCLASS()
-class AOWHUD : public AHUD
+class OPENWORLD_API AOWHUD : public AHUD
 {
 	GENERATED_BODY()
 	
@@ -18,8 +18,8 @@ public:
 
 	// ===== Interfaces ========== //
 
-	void ShowTip(const FString& Text);
-	void HideTip();
+	FORCEINLINE void ShowTip(const FString& Text);
+	FORCEINLINE void HideTip();
 
 protected:
 	// ===== Lifecycles ========== //

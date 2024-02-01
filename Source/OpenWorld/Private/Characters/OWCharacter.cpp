@@ -125,6 +125,11 @@ void AOWCharacter::MoveForward()
 
 // ==================== Attributes ==================== //
 
+void AOWCharacter::ResetState()
+{
+	CharacterState = ECharacterState::ECS_NoAction;
+}
+
 void AOWCharacter::Die()
 {
 	if (IsDead()) return;
@@ -154,6 +159,7 @@ void AOWCharacter::Die()
 
 void AOWCharacter::Stunned()
 {
+	EnableWeapon(false);
 	PlayAnimMontage(Montages["Stunned"].LoadSynchronous());
 	GetCharacterMovement()->StopMovementImmediately();
 
@@ -206,7 +212,7 @@ void AOWCharacter::AttachWeapon()
 
 void AOWCharacter::SwapWeapon()
 {
-	if (!bAllowSwapWeapon || !IsReady()) return;
+	if (!bAllowSwapWeapon || !IsReady() || IsOnMontage("Equipping")) return;
 
 	// Determine which section to play the montage
 	FName SectionName = bEquipWeapon ? TEXT("Equip") : TEXT("Unequip");
@@ -245,7 +251,7 @@ void AOWCharacter::LockNearest()
 		TraceLocation, 
 		FQuat::Identity,
 		ObjectParams,
-		FCollisionShape::MakeSphere(250.f),
+		FCollisionShape::MakeSphere(650.f),
 		QueryParams
 	);
 
@@ -267,7 +273,7 @@ void AOWCharacter::LockNearest()
 
 void AOWCharacter::LockOn(float DeltaTime)
 {
-	if (!TargetCombat.IsValid()) return;
+	if (!TargetCombat.IsValid() || IsOnMontage("Stunned")) return;
 
 	FRotator CurrentRotation = GetActorRotation();
 	FRotator NewRotation 	 = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), TargetCombat->GetActorLocation());
@@ -363,21 +369,72 @@ void AOWCharacter::Attack()
 	CharacterState = ECharacterState::ECS_Action;
 	GetCharacterMovement()->StopMovementImmediately();
 
-	// Play montage depends on the carried weapon
-	FName AttackCombo     = *FString::Printf(TEXT("%s%d"), *CarriedWeapon->GetWeaponName(), AttackCount);
-	UAnimMontage* Montage = Montages["Attacking"].LoadSynchronous(); 
-	PlayAnimMontage(Montage, 1.f, AttackCombo);
+    // Make sure to make noise since the attacking has whoosh sound
+    MakeNoise(1.f, this, GetActorLocation(), 500.f);
 
-	// Make sure to make noise since the attacking has whoosh sound
-	MakeNoise(1.f, this, GetActorLocation(), 500.f);
+	// Which attack will be?
+	if (bCharging) ChargeAttack();
+	else		   AttackCombo();
 
-	// Updating combo, don't forget to update the combo over too
-	AttackCount = (AttackCount + 1) % 3;
-	GetWorldTimerManager().SetTimer(
-		ComboOverHandler,
-		this,
-		&ThisClass::ComboOver,
-		ComboOverTimer
+    // Reset
+	DamageMultiplier = 1.f;
+	bCharging        = false;
+	GetWorldTimerManager().ClearTimer(ChargeTimerHandle);
+}
+
+void AOWCharacter::AttackCombo()
+{
+    // Play montage depends on the carried weapon
+    FName AttackCombo = *FString::Printf(TEXT("%s%d"), *CarriedWeapon->GetWeaponName(), AttackCount);
+    UAnimMontage *Montage = Montages["Attacking"].LoadSynchronous();
+    PlayAnimMontage(Montage, 1.f, AttackCombo);
+
+    // Updating combo, don't forget to update the combo over too
+    AttackCount = (AttackCount + 1) % 3;
+    GetWorldTimerManager().SetTimer(
+        ComboOverHandler,
+        this,
+        &ThisClass::ComboOver,
+        ComboOverTimer
+	);
+}
+
+void AOWCharacter::StartChargeAttack()
+{
+	// If already attacking/on charge attack already
+	if (!bEquipWeapon || IsOnMontage("Attacking")) return;
+
+	DamageMultiplier += DamageMultiplierRate * GetWorld()->GetDeltaSeconds();
+
+	// Start timer for the first time
+	if (!GetWorldTimerManager().IsTimerActive(ChargeTimerHandle) && !bCharging)
+	{
+		GetWorldTimerManager().ClearTimer(ChargeTimerHandle);
+		GetWorldTimerManager().SetTimer(ChargeTimerHandle, this, &ThisClass::OnChargeAttack, ChargeAfter);
+	}
+}
+
+void AOWCharacter::OnChargeAttack()
+{
+	// ...
+	bCharging = true;
+
+	LockNearest();
+	PlayAnimMontage(Montages["Charge Attack"].LoadSynchronous());
+
+	// Start timer to perform actual charge attack
+	GetWorldTimerManager().ClearTimer(ChargeTimerHandle);
+	GetWorldTimerManager().SetTimer(ChargeTimerHandle, this, &ThisClass::Attack, AutoChargeTimer);
+}
+
+void AOWCharacter::ChargeAttack()
+{
+    FName ChargeAttackSection = *FString::Printf(TEXT("%sChargeAttack"), *CarriedWeapon->GetWeaponName());
+    PlayAnimMontage(Montages["Attacking"].LoadSynchronous(), 1.f, ChargeAttackSection);
+
+    CarriedWeapon->SetTempDamage(
+        CarriedWeapon->GetDamage() * DamageMultiplier,
+		false
 	);
 }
 

@@ -46,6 +46,7 @@ void UInventoryComponent::ChangeWeapon(int8 Slot)
 
 	if (Weapons[LastWeapon].IsValid()) 
 		GetWorld()->GetTimerManager().SetTimer(UnequipingTimerHandle, this, &ThisClass::UnequipWeapon, .6f);
+
 	PlayerCharacter->SetCarriedWeapon(bShouldEquip ? Weapons[CurrentWeapon] : nullptr, Weapons[CurrentWeapon].IsValid());
 }
 

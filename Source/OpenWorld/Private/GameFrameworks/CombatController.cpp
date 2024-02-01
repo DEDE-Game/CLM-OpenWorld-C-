@@ -73,7 +73,7 @@ void ACombatController::OnMoveCompleted(FAIRequestID RequestID, const FPathFollo
     bool bCanDecide = Result.IsSuccess() && CombatCharacter->TargetCombat.IsValid();
 
     // Start to Decide
-    if (bCanDecide) Decide();
+    if (bCanDecide) Engage();
     else
     {
         // Investigate then start to patrolling
@@ -121,6 +121,89 @@ void ACombatController::OnTargetSense(AActor* Actor, FAIStimulus Stimulus)
     CombatCharacter->SetLockOn(Other);
 }
 
+void ACombatController::Engage()
+{
+    // Reset
+    CombatCharacter->ToggleWalk(false);
+    bStrafing     = false;
+    bDisableSense = true;
+    GetWorldTimerManager().ClearTimer(PatrollingDelayHandler);
+
+    // Randomize next Engage
+    float NextEngageTimer = FMath::RandRange(EngageDelayMin, EngageDelayMax);
+    GetWorldTimerManager().SetTimer(EngageDelayHandle, this, &ThisClass::Engage, NextEngageTimer);
+
+    // If on doing something, do none
+    if (CombatCharacter->IsOnMontage()) return;
+
+    // When the enemy is dead
+    if (!CombatCharacter->TargetCombat.IsValid() || CombatCharacter->TargetCombat->IsDead())
+    {
+        // Check for nearest enemy first
+        CombatCharacter->LockNearest();
+
+        // If nearest enemy is still not exists, start patrolling
+        if (!CombatCharacter->TargetCombat.IsValid())
+        {
+            StartPatrolling();
+
+            return;
+        }
+    }
+
+    // Get the decision randomly, but we can adjust the aggresivly
+    int8 Decision = FMath::RandRange(0, EngageChances.Num() - 1);
+    Decision = EngageChances[Decision];
+    
+    switch (Decision)
+    {
+    // Attacking
+    case 0:
+        Attacking();
+        break;
+
+    // Strafing
+    case 1:
+        StartStrafing();
+        break;
+
+    // Blocking
+    case 2:
+        Blocking();
+        break;
+
+    // Charge Attack
+    case 3:
+        CombatCharacter->StartChargeAttack();
+        break;
+
+    default:
+        Attacking();
+        break;
+    }
+}
+
+void ACombatController::StartStrafing()
+{
+    bStrafing = true;
+    StrafeDirectionX = FMath::RandRange(0, 1) ? -1.f : 1.f;
+    StrafeDirectionY = FMath::RandRange(-1.f, 1.f);
+}
+
+void ACombatController::Blocking()
+{
+    CombatCharacter->ToggleBlock(true);
+
+    // Disable it after certain time
+    float Timer = FMath::RandRange(1.f, 4.f);
+
+    GetWorldTimerManager().SetTimer(
+        BlockingTimerHandle, [this]()
+        { CombatCharacter->ToggleBlock(false); },
+        Timer, false
+    );
+}
+
 // ==================== Patrolling ==================== //
 
 void ACombatController::StartPatrolling()
@@ -156,13 +239,13 @@ void ACombatController::Attacking()
     // Make sure to use weapon first
     if (!CombatCharacter->bEquipWeapon) CombatCharacter->SwapWeapon();
 
-    // If character is not ready to attack yet OR
+    // If character is not ready to attack yet AND
     // Only attacking if the enemy's target is self instead, he will just strafing, blocking, etc
     bool bNotForceAttack = CombatCharacter->GetTargetCombat()->GetTargetCombat() /* Enemy's target combat */ != CombatCharacter &&
                         !FMath::RandBool();
     if (!CombatCharacter->IsReady() || bNotForceAttack)
     {
-        ReDecide();
+        ReEngage();
 
         return;
     }
@@ -189,74 +272,6 @@ void ACombatController::Attacking()
 void ACombatController::FinishedReaction()
 {
     CombatCharacter->SetLockOn(CombatCharacter->TargetCombat.Get());
-}
-
-void ACombatController::Decide()
-{
-    // Reset
-    CombatCharacter->ToggleWalk(false);
-    bStrafing     = false;
-    bDisableSense = true;
-    GetWorldTimerManager().ClearTimer(PatrollingDelayHandler);
-
-    // Randomize next decision
-    float NextDecisionTimer = FMath::RandRange(DecisionDelayMin, DecisionDelayMax);
-    GetWorldTimerManager().SetTimer(DecisionDelayHandle, this, &ThisClass::Decide, NextDecisionTimer);
-
-    // If stunned, do none
-    if (CombatCharacter->IsOnMontage("Stunned")) return;
-
-    // When the enemy is dead
-    if (!CombatCharacter->TargetCombat.IsValid() || CombatCharacter->TargetCombat->IsDead())
-    {
-        // Check for nearest enemy first
-        CombatCharacter->LockNearest();
-
-        // If nearest enemy is still not exists, start patrolling
-        if (!CombatCharacter->TargetCombat.IsValid())
-        {
-            StartPatrolling();
-
-            return;
-        }
-    }
-
-    // Get the decision randomly, but we can adjust the aggresivly
-    int8 Decision = FMath::RandRange(0, DecisionChances.Num() - 1);
-    Decision = DecisionChances[Decision];
-    
-    switch (Decision)
-    {
-    // Attacking
-    case 0:
-        Attacking();
-        break;
-
-    // Strafing
-    case 1:
-        bStrafing = true;
-        StrafeDirectionX = FMath::RandRange(0, 1) ? -1.f : 1.f;
-        StrafeDirectionY = FMath::RandRange(-1.f, 1.f);
-        break;
-
-    // Blocking
-    case 2:
-    {
-        CombatCharacter->ToggleBlock(true);
-
-        // Disable it after certain time
-        float Timer = FMath::RandRange(1.f, 4.f);
-
-        GetWorldTimerManager().SetTimer(BlockingTimerHandle, [this]() {
-            CombatCharacter->ToggleBlock(false);
-        }, Timer, false);
-        break;
-    }
-
-    default:
-        Attacking();
-        break;
-    }
 }
 
 void ACombatController::Strafing()

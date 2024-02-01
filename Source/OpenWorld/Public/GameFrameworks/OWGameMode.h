@@ -7,7 +7,7 @@
 #include "OWGameMode.generated.h"
 
 UCLASS()
-class AOWGameMode : public AGameModeBase
+class OPENWORLD_API AOWGameMode : public AGameModeBase
 {
 	GENERATED_BODY()
 

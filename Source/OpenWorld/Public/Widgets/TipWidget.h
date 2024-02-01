@@ -9,12 +9,12 @@
 class UTextBlock;
 
 UCLASS()
-class UTipWidget : public UUserWidget
+class OPENWORLD_API UTipWidget : public UUserWidget
 {
 	GENERATED_BODY()
 	
 public:
-	void ShowTip(const FString& Text);
+	FORCEINLINE void ShowTip(const FString& Text);
 	FORCEINLINE void HideTip()
 	{
 		SetVisibility(ESlateVisibility::Collapsed);

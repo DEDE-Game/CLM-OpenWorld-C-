@@ -10,7 +10,7 @@ class AOWCharacter;
 class UCharacterMovementComponent;
 
 UCLASS()
-class UHumanCharacterAnimation : public UAnimInstance
+class OPENWORLD_API UHumanCharacterAnimation : public UAnimInstance
 {
 	GENERATED_BODY()
 	

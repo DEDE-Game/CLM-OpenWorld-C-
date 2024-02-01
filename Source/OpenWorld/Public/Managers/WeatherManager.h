@@ -15,7 +15,7 @@ class UMaterialParameterCollection;
 class UMaterialParameterCollectionInstance;
 
 UCLASS()
-class AWeatherManager : public AActor
+class OPENWORLD_API AWeatherManager : public AActor
 {
 	GENERATED_BODY()
 	
@@ -78,7 +78,7 @@ private:
 	void SetLightingValues(const FLinearColor& AtmosphereColor, float CloudDensity, float CloudIntensity);
 
 	/** Function helper to interpolate linear color constantly */
-	FLinearColor InterpLinearColor(float DeltaTime, float InterpSpeed);
+	FORCEINLINE FLinearColor InterpLinearColor(float DeltaTime, float InterpSpeed);
 
 	// ===== Environments ========== //
 

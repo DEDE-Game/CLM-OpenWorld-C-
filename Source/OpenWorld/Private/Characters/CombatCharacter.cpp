@@ -14,19 +14,28 @@ ACombatCharacter::ACombatCharacter()
 {
     AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 
-    // Make combo over for enemy longer
-    ComboOverTimer = 5.f;
+    // Combat
+    ChargeAfter     = .05f;
+    AutoChargeTimer = .4f;
+    ComboOverTimer  = 5.f;
 
     // Collision
     GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Camera, ECollisionResponse::ECR_Ignore);
     GetMesh()            ->SetCollisionResponseToChannel(ECollisionChannel::ECC_Camera, ECollisionResponse::ECR_Ignore);
 
     // Health Bar
-    HealthBarComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("Health Bar"));
-    HealthBarComponent->SetupAttachment(RootComponent);
-    HealthBarComponent->SetWidgetSpace(EWidgetSpace::Screen);
-    HealthBarComponent->SetDrawAtDesiredSize(true);
-    HealthBarComponent->SetVisibility(true);
+    HealthBar = CreateDefaultSubobject<UWidgetComponent>(TEXT("Health Bar"));
+    HealthBar->SetupAttachment(RootComponent);
+    HealthBar->SetWidgetSpace(EWidgetSpace::Screen);
+    HealthBar->SetDrawAtDesiredSize(true);
+    HealthBar->SetVisibility(true);
+
+    // Attack Indicator
+    AttackIndicator = CreateDefaultSubobject<UWidgetComponent>(TEXT("Attack Indicator"));
+    AttackIndicator->SetupAttachment(RootComponent);
+    AttackIndicator->SetWidgetSpace(EWidgetSpace::Screen);
+    AttackIndicator->SetDrawAtDesiredSize(true);
+    AttackIndicator->SetVisibility(false);
 
     // Nav Invoker
     NavInvoker = CreateDefaultSubobject<UNavigationInvokerComponent>(TEXT("Navigation Invoker"));
@@ -47,7 +56,12 @@ void ACombatCharacter::DefaultInitializer()
     static ConstructorHelpers::FClassFinder<UUserWidget> HealthBarAsset(
         TEXT("/Game/Game/Blueprints/Widgets/CombatCharacter/WBP_HealthBar")
     );
-    HealthBarComponent->SetWidgetClass(HealthBarAsset.Class);
+    HealthBar->SetWidgetClass(HealthBarAsset.Class);
+
+    static ConstructorHelpers::FClassFinder<UUserWidget> AttackIndicatorAsset(
+        TEXT("/Game/Game/Blueprints/Widgets/CombatCharacter/WBP_AttackIndicator")
+    );
+    AttackIndicator->SetWidgetClass(AttackIndicatorAsset.Class);
 
     static ConstructorHelpers::FClassFinder<AMeleeWeapon> AxeAsset(
         TEXT("/Game/Game/Blueprints/Weapons/BP_Axe")
@@ -65,19 +79,28 @@ void ACombatCharacter::DefaultInitializer()
 	SlowSFX = SlowSFXAsset.Object;
 }
 
+void ACombatCharacter::InitializeUI()
+{
+    HealthBarWidget = Cast<UHealthBar>(HealthBar->GetUserWidgetObject());
+    HealthBarWidget->UpdateHealth(Health / MaxHealth);
+
+    if (Team == ETeam::T_Friend)
+    {
+        HealthBarWidget->SetHealthColor({0.548f, 0.973f, 0.162f, 1.f});
+
+        // Destroy attack indicator as we don't need it
+        AttackIndicator->DestroyComponent();
+    }
+}
+
 // ==================== Lifecycles ==================== //
 
 void ACombatCharacter::BeginPlay()
 {
     Super::BeginPlay();
 
-    // Give weapon
     RandomizeWeapon();
-
-    // Initializing UI
-    HealthBar = Cast<UHealthBar>(HealthBarComponent->GetUserWidgetObject());
-    HealthBar->UpdateHealth(Health / MaxHealth);
-    if (Team == ETeam::T_Friend) HealthBar->SetHealthColor({ 0.548f, 0.973f, 0.162f, 1.f });
+    InitializeUI();
 }
 
 void ACombatCharacter::PossessedBy(AController* NewController)
@@ -100,7 +123,7 @@ void ACombatCharacter::Die()
 {
     Super::Die();
 
-    HealthBarComponent->SetVisibility(false);
+    HealthBar->SetVisibility(false);
 }
 
 // ==================== Combat ==================== //
@@ -127,16 +150,33 @@ void ACombatCharacter::OnWeaponHit(AOWCharacter* DamagingCharacter, const FVecto
     }
 
     // Update UI
-    HealthBar->UpdateHealth(Health / MaxHealth);
+    HealthBarWidget->UpdateHealth(Health / MaxHealth);
 }
 
-void ACombatCharacter::Attack()
+void ACombatCharacter::AttackCombo()
 {
-    Super::Attack();
+    Super::AttackCombo();
 
-    // Slow down the time to give player a chance to dodge/block
-    if (TargetCombat.IsValid() && TargetCombat->GetClass()->IsChildOf(APlayerCharacter::StaticClass()))
+    // Give player chance to dodge/block
+    if (APlayerCharacter* PlayerCharacter = Cast<APlayerCharacter>(TargetCombat.Get()))
     {
+        AttackIndicator->SetVisibility(true);
+        PlayerCharacter->ShowTip(TEXT("[ALT] / [RMB] - To Dodge / Block"));
+    }
+}
+
+void ACombatCharacter::StartChargeAttack()
+{
+    Super::StartChargeAttack();
+
+    // Give player chance to dodge since charge attack is unblockable
+    if (APlayerCharacter* PlayerCharacter = Cast<APlayerCharacter>(TargetCombat.Get()))
+    {
+        // Attack Indicator
+        AttackIndicator->SetVisibility(true);
+        PlayerCharacter->ShowTip(TEXT("[ALT] + [WASD] - To dash"));
+
+        // Slow the time
         UGameplayStatics::PlaySound2D(this, SlowSFX.LoadSynchronous());
         UGameplayStatics::SetGlobalTimeDilation(this, .5f);
     }
@@ -147,8 +187,14 @@ void ACombatCharacter::EnableWeapon(bool bEnabled)
     Super::EnableWeapon(bEnabled);
 
     // After attacking, set back the time to normal
-    if (TargetCombat.IsValid() && TargetCombat->GetClass()->IsChildOf(APlayerCharacter::StaticClass()))
-        UGameplayStatics::SetGlobalTimeDilation(this, 1.f);
+    if (!bEnabled)
+        if (APlayerCharacter* PlayerCharacter = Cast<APlayerCharacter>(TargetCombat.Get()))
+        {
+            AttackIndicator->SetVisibility(false);
+            PlayerCharacter->HideTip();
+
+            UGameplayStatics::SetGlobalTimeDilation(this, 1.f);
+        }
 }
 
 void ACombatCharacter::AttachWeapon()

@@ -15,7 +15,7 @@ class UHitInterface : public UInterface
 	GENERATED_BODY()
 };
 
-class IHitInterface
+class OPENWORLD_API IHitInterface
 {
 	GENERATED_BODY()
 

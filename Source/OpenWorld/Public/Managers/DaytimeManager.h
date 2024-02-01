@@ -10,7 +10,7 @@ class ADirectionalLight;
 class APostProcessVolume;
 
 UCLASS()
-class ADaytimeManager : public AActor
+class OPENWORLD_API ADaytimeManager : public AActor
 {
 	GENERATED_BODY()
 

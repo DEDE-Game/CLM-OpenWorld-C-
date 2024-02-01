@@ -9,15 +9,15 @@
 class UProgressBar;
 
 UCLASS()
-class UHealthBar : public UUserWidget
+class OPENWORLD_API UHealthBar : public UUserWidget
 {
 	GENERATED_BODY()
 
 public:
 	// ===== Interfaces ========== //
 
-	void UpdateHealth(float Percentage);
-	void SetHealthColor(const FLinearColor& LinearColor);
+	FORCEINLINE void UpdateHealth(float Percentage);
+	FORCEINLINE void SetHealthColor(const FLinearColor& LinearColor);
 
 private:
 	UPROPERTY(meta=(BindWidget))

@@ -9,7 +9,7 @@
 class UInputMappingContext;
 
 UCLASS()
-class AOWPlayerController : public APlayerController
+class OPENWORLD_API AOWPlayerController : public APlayerController
 {
 	GENERATED_BODY()
 

@@ -14,7 +14,7 @@ class USphereComponent;
 class UNiagaraSystem;
 
 UCLASS(Abstract)
-class AOWCharacter : public ACharacter, public IHitInterface
+class OPENWORLD_API AOWCharacter : public ACharacter, public IHitInterface
 {
 	GENERATED_BODY()
 
@@ -64,15 +64,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category=Locomotions)
 	float WalkSpeed = 200.f;
 
-	void ToggleWalk(bool bToggled);
-	void ToggleSprint(bool bToggled);
-	void ToggleCrouch(bool bTogged);
-
-	UFUNCTION(BlueprintCallable)
-	FORCEINLINE void ResetState()
-	{
-		CharacterState = ECharacterState::ECS_NoAction;
-	}
+	FORCEINLINE void ToggleWalk(bool bToggled);
+	FORCEINLINE void ToggleSprint(bool bToggled);
+	FORCEINLINE void ToggleCrouch(bool bToggled);
 
 	UFUNCTION(BlueprintCallable)
 	void MoveForward();
@@ -83,6 +77,9 @@ protected:
 	// ***===== Attributes ==========*** //
 
 	ECharacterState CharacterState = ECharacterState::ECS_NoAction;
+
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE void ResetState();
 
 	// *** Health Related *** //
 
@@ -104,7 +101,7 @@ protected:
 
 	FTimerHandle StunTimerHandle;
 	
-	void FinishedStunned();
+	FORCEINLINE void FinishedStunned();
 
 	// ***===== Combat ==========*** //
 
@@ -129,6 +126,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category=Combat)
 	float ComboOverTimer = 2.f;
 
+	virtual void AttackCombo();
 	FORCEINLINE void ComboOver();
 
 	// *** Weapon & Blocking *** //
@@ -162,7 +160,7 @@ protected:
 	 * 
 	 * @param Target If the target is nullptr, then the character wont lock on anything (Clear Lock On)
 	 */
-	virtual void SetLockOn(AOWCharacter* Target);
+	FORCEINLINE virtual void SetLockOn(AOWCharacter* Target);
 
 	/** Find nearest enemy then lock to him */
 	void LockNearest();
@@ -171,8 +169,26 @@ protected:
 
 	virtual void Attack();
 
-	/** Called when the target is out of combat radius */	
+	/** Called when the target is out of combat radius */
 	virtual void OnLostInterest() {};
+
+	// *** CHARGING ATTACK *** //
+
+	UPROPERTY(EditAnywhere, Category=Combat)
+	float DamageMultiplierRate = .8f;
+
+	float DamageMultiplier = 1.f;
+
+	/** Once the time is passed, will use charge attack instead */
+	FTimerHandle ChargeTimerHandle;
+	float ChargeAfter = .2f;
+	float AutoChargeTimer = 1.f;
+
+	bool bCharging = false;
+
+	virtual void StartChargeAttack();
+	void OnChargeAttack();
+	void ChargeAttack();
 
 	// *** Kicking *** //
 
@@ -182,9 +198,9 @@ protected:
 	UFUNCTION()
 	void OnKick(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
-    // ***===== Animations ==========*** //
+	// ***===== Animations ==========*** //
 
-    UPROPERTY(EditDefaultsOnly, Category=Animations)
+	UPROPERTY(EditDefaultsOnly, Category=Animations)
 	TMap<FName, TSoftObjectPtr<UAnimMontage>> Montages;
 
 	// ***===== Audio ==========*** //
@@ -231,11 +247,14 @@ public:
 	{
 		return CharacterState == ECharacterState::ECS_Died;
 	}
-	FORCEINLINE const bool IsOnMontage(const FName& MontageName)
+	FORCEINLINE const bool IsOnMontage(const FName& MontageName = TEXT("Any"))
 	{
+		UAnimMontage* Montage = GetCurrentMontage();
+		if (MontageName == TEXT("Any")) return Montage != nullptr;
+
 		if (!Montages.Contains(MontageName)) return false;
 
-		return GetCurrentMontage() ? GetCurrentMontage() == Montages[MontageName].Get() : false;
+		return Montage ? Montage == Montages[MontageName].Get() : false;
 	}
 	FORCEINLINE ETeam GetTeam() const 
 	{

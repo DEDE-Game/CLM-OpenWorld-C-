@@ -18,7 +18,7 @@ class UWidgetComponent;
  * Implements that interface to make able to spawn blood decal 
  */
 UCLASS()
-class AMeleeWeapon : public AActor, public INiagaraParticleCallbackHandler
+class OPENWORLD_API AMeleeWeapon : public AActor, public INiagaraParticleCallbackHandler
 {
 	GENERATED_BODY()
 	
@@ -28,13 +28,16 @@ public:
 	// ===== Interfaces ========== //
 
 	void Pickup(AOWCharacter* NewOwner, FName SocketName);
-	void EquipTo(bool bEquipping);
+
+	FORCEINLINE void EquipTo(bool bEquipping);
+
 	void Drop();
 
 	// ===== Combat ========== //
 
-	void EnableCollision(bool bEnabled);
-	void SetTempDamage(float TempDamage, bool bDamageBlockable = true);
+	FORCEINLINE void EnableCollision(bool bEnabled);
+	FORCEINLINE void SetTempDamage(float TempDamage, bool bDamageBlockable = true);
+
 	virtual void ReceiveParticleData_Implementation(const TArray<FBasicParticleData>& Data, UNiagaraSystem* NiagaraSystem, const FVector& SimulationPositionOffset) override;
 
 protected:
